@@ -1,0 +1,49 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Unidad Deportiva Zona Sur",
+        "municipio": "Sabaneta",
+        "tipo": "Unidad deportiva"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.616, 6.151]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Polideportivo Óscar López Escobar",
+        "municipio": "Itagüí",
+        "tipo": "Polideportivo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.61, 6.17]
+      }
+      
+      
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "nombre": "Complejo Deportivo Ditaires",
+        "municipio": "Itagüí",
+        "tipo": "Complejo deportivo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-75.62, 6.17]
+      }
+    }
+  ]
+}
