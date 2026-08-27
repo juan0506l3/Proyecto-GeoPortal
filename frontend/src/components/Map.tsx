@@ -13,15 +13,34 @@ import CircleStyle from "ol/style/Circle";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Overlay from "ol/Overlay";
+import Feature from "ol/Feature"; // 🆕 para dibujar el marcador del punto capturado
+import Point from "ol/geom/Point"; // 🆕
 
 import "ol/ol.css";
 
+// 🆕 Misión 1: detector del SRE de la capa
+import { detectLayerProjection } from "../projections/detectLayerProjection";
+import type { LayerProjectionInfo } from "../projections/detectLayerProjection";
+
+// 🆕 Misión 2: captura de coordenadas
+import { transformCoordinate } from "../projections/transform";
+import { getProjectionLabel, isGeographic } from "../projections/projections";
+import type { CapturedPoint } from "../projections/types";
+
+// 🆕 Sistemas en los que se muestra cada coordenada capturada
+const CAPTURE_TARGETS = ["EPSG:4326", "EPSG:3857", "EPSG:9377"];
+
 interface MapComponentProps {
   projection: string;
-  onLayerProjectionChange: (projection: string) => void;
+  onLayerProjectionChange: (info: LayerProjectionInfo) => void; // 🆕 ahora recibe el objeto completo, no solo un string
+  onCoordinateCapture?: (point: CapturedPoint) => void; // 🆕
 }
 
-function MapComponent({ projection, onLayerProjectionChange }: MapComponentProps) {
+function MapComponent({
+  projection,
+  onLayerProjectionChange,
+  onCoordinateCapture, // 🆕
+}: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -30,10 +49,8 @@ function MapComponent({ projection, onLayerProjectionChange }: MapComponentProps
     fetch("/data/deportivos.geojson")
       .then((response) => response.json())
       .then((data) => {
-        const layerProjection =
-          data.crs?.properties?.name || "EPSG:4326";
-
-        onLayerProjectionChange(layerProjection);
+        // 🆕 antes: const layerProjection = data.crs?.properties?.name || "EPSG:4326";
+        onLayerProjectionChange(detectLayerProjection(data));
       });
 
     const deportivosSource = new VectorSource();
@@ -68,6 +85,20 @@ function MapComponent({ projection, onLayerProjectionChange }: MapComponentProps
         deportivosSource.addFeatures(features);
       });
 
+    // 🆕 Capa aparte para el marcador del punto capturado con clic
+    const captureSource = new VectorSource();
+
+    const captureLayer = new VectorLayer({
+      source: captureSource,
+      style: new Style({
+        image: new CircleStyle({
+          radius: 8,
+          fill: new Fill({ color: "#1e88e5" }),
+          stroke: new Stroke({ color: "white", width: 2 }),
+        }),
+      }),
+    });
+
     const map = new Map({
       target: mapRef.current,
 
@@ -76,6 +107,7 @@ function MapComponent({ projection, onLayerProjectionChange }: MapComponentProps
           source: new OSM(),
         }),
         deportivosLayer,
+        captureLayer, // 🆕
       ],
 
       view: new View({
@@ -126,6 +158,29 @@ function MapComponent({ projection, onLayerProjectionChange }: MapComponentProps
 
       popupElement.style.display = "block";
       popup.setPosition(event.coordinate);
+    });
+
+    // 🆕 Misión 2: captura de coordenadas en cada clic del mapa
+    map.on("singleclick", (event) => {
+      const clicked = event.coordinate as [number, number];
+
+      captureSource.clear();
+      captureSource.addFeature(new Feature(new Point(clicked)));
+
+      if (!onCoordinateCapture) return;
+
+      const entries = CAPTURE_TARGETS.map((code) => {
+        const [x, y] = transformCoordinate(clicked, projection, code);
+        return {
+          code,
+          label: getProjectionLabel(code),
+          x,
+          y,
+          unit: isGeographic(code) ? ("deg" as const) : ("m" as const),
+        };
+      });
+
+      onCoordinateCapture({ viewProjection: projection, entries });
     });
 
     return () => {
