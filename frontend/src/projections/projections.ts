@@ -29,13 +29,27 @@ export const SUPPORTED_PROJECTIONS = [
     name: "Web Mercator",
     type: "Proyectado",
   },
+  {
+    code: "EPSG:9377",
+    name: "MAGNA-SIRGAS / Origen-Nacional",
+    type: "Proyectado",
+  },
 ];
 
 export function getProjectionLabel(code: string): string {
-  const found = SUPPORTED_PROJECTIONS.find((p) => p.code === code);
-  return found ? `${found.code} · ${found.name}` : code;
+  const found = SUPPORTED_PROJECTIONS.find(
+    (p) => p.code === code
+  );
+
+  return found
+    ? `${found.code} · ${found.name}`
+    : code;
 }
 
 export function isGeographic(code: string): boolean {
-  return SUPPORTED_PROJECTIONS.find((p) => p.code === code)?.type === "Geográfico";
+  return (
+    SUPPORTED_PROJECTIONS.find(
+      (p) => p.code === code
+    )?.type === "Geográfico"
+  );
 }
