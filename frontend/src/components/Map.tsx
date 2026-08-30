@@ -34,6 +34,8 @@ import {
 
 import type { CapturedPoint } from "../projections/types";
 
+import type { GeoJSONLayer } from "../projections/layers";
+
 const CAPTURE_TARGETS = [
   "EPSG:4326",
   "EPSG:3857",
@@ -43,6 +45,9 @@ const CAPTURE_TARGETS = [
 interface MapComponentProps {
   // SRE del visor
   projection: string;
+
+  // Capas GeoJSON cargadas por el usuario
+  layers: GeoJSONLayer[];
 
   // SRE al que el usuario quiere reproyectar la capa
   layerTargetProjection?: string | null;
@@ -60,6 +65,7 @@ interface MapComponentProps {
 
 function MapComponent({
   projection,
+  layers,
   layerTargetProjection,
   reprojectedLayer,
   onLayerProjectionChange,
@@ -113,6 +119,62 @@ function MapComponent({
           }),
         }),
       });
+  
+    /*
+     * ================================================
+     * 2.5. Crear las capas GeoJSON del usuario
+     * ================================================
+     */
+
+    const uploadedLayers = layers.map((layer) => {
+      const source = new VectorSource();
+
+      const vectorLayer = new VectorLayer({
+        source,
+
+        visible: layer.visible,
+
+        style: new Style({
+          image: new CircleStyle({
+            radius: 6,
+
+            fill: new Fill({
+              color: "#1976d2",
+            }),
+
+            stroke: new Stroke({
+              color: "white",
+              width: 2,
+            }),
+          }),
+        }),
+      });
+
+      const sourceProjection =
+        layer.projection.code;
+
+      const features = reprojectGeoJSON(
+        layer.data,
+        sourceProjection,
+        projection
+      );
+
+      source.addFeatures(features);
+
+      console.log(
+        `Capa cargada: ${layer.name}`
+      );
+
+      console.log(
+        `SRE de la capa: ${sourceProjection}`
+      );
+
+      console.log(
+        `SRE del visor: ${projection}`
+      );
+
+      return vectorLayer;
+    });
 
     /*
      * ================================================
@@ -216,6 +278,8 @@ function MapComponent({
         }),
 
         deportivosLayer,
+
+        ...uploadedLayers,
 
         captureLayer,
       ],
@@ -375,6 +439,7 @@ function MapComponent({
     };
   }, [
     projection,
+    layers,
     layerTargetProjection,
     reprojectedLayer,
     onLayerProjectionChange,

@@ -7,6 +7,10 @@ import type { LayerProjectionInfo } from "./projections/detectLayerProjection";
 import type { CapturedPoint } from "./projections/types";
 import LayerProjectionControl from "./components/LayerProjectionControl";
 import { reprojectGeoJSONData } from "./projections/reproject";
+import GeoJSONUploader from "./components/GeoJSONUploader";
+import type { GeoJSONLayer } from "./projections/layers";
+import { detectLayerProjection } from "./projections/detectLayerProjection";
+import LayerList from "./components/LayerList";
 
 function App() {
   // SRE del visor
@@ -32,6 +36,10 @@ function App() {
   // Resultado GeoJSON de la reproyección
   const [reprojectedLayer, setReprojectedLayer] =
     useState<unknown | null>(null);
+
+  // Capas GeoJSON cargadas por el usuario
+  const [layers, setLayers] =
+    useState<GeoJSONLayer[]>([]);
 
   const handleReproject = async () => {
     if (!layerProjection) {
@@ -79,6 +87,45 @@ function App() {
     }
   };
 
+  const handleGeoJSONLoaded = (
+    data: unknown,
+    fileName: string
+  ) => {
+    const projectionInfo =
+      detectLayerProjection(data);
+
+    const newLayer: GeoJSONLayer = {
+      id: crypto.randomUUID(),
+      name: fileName,
+      data,
+      visible: true,
+      projection: projectionInfo,
+    };
+
+    setLayers((previousLayers) => [
+      ...previousLayers,
+      newLayer,
+    ]);
+
+    console.log(
+      "Nueva capa cargada:",
+      newLayer
+    );
+  };
+
+  const handleLayerVisibilityChange = (
+    id: string,
+    visible: boolean
+  ) => {
+    setLayers((previousLayers) =>
+      previousLayers.map((layer) =>
+        layer.id === id
+          ? { ...layer, visible }
+          : layer
+      )
+    );
+  };
+
   return (
     <div>
       <h1>GeoPortal</h1>
@@ -115,6 +162,19 @@ function App() {
         }
       />
 
+      <GeoJSONUploader
+        onFileLoaded={
+          handleGeoJSONLoaded
+        }
+      />
+
+      <LayerList
+        layers={layers}
+        onVisibilityChange={
+          handleLayerVisibilityChange
+        }
+      />
+
       {layerTargetProjection && (
         <div>
           <p>
@@ -139,6 +199,7 @@ function App() {
 
       <MapComponent
         projection={projection}
+        layers={layers}
         layerTargetProjection={
           layerTargetProjection
         }
