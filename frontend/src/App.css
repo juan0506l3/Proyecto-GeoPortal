@@ -1,0 +1,25 @@
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+  }
+  
+  .app-layout__header {
+    flex-shrink: 0;
+    padding: 10px 20px;
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  .app-layout__header h1 {
+    margin: 0;
+    font-size: 18px;
+  }
+  
+  .app-layout__body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+  }

@@ -1,0 +1,24 @@
+.uploader {
+    margin: 10px 0;
+  }
+  
+  .uploader__button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 16px;
+    background: #1a56db;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s ease;
+  }
+  
+  .uploader__button:hover {
+    background: #1746b3;
+  }

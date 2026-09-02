@@ -3,10 +3,7 @@ import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
-import {
-  fromLonLat,
-  get as getProjection,
-} from "ol/proj";
+import { fromLonLat, get as getProjection } from "ol/proj";
 
 import "./Map.css";
 import "ol/ol.css";
@@ -20,6 +17,7 @@ import Stroke from "ol/style/Stroke";
 import Overlay from "ol/Overlay";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
+import type { FeatureLike } from "ol/Feature";
 
 import { reprojectGeoJSON } from "../projections/reproject";
 
@@ -32,6 +30,12 @@ import {
   isGeographic,
 } from "../projections/projections";
 
+import {
+  getFeatureCategory,
+  getCategoryColor,
+  getCategoryLabel,
+} from "../projections/eventCategories";
+
 import type { CapturedPoint } from "../projections/types";
 
 import type { GeoJSONLayer } from "../projections/layers";
@@ -43,16 +47,15 @@ const CAPTURE_TARGETS = [
 ];
 
 interface MapComponentProps {
-  // SRE del visor
   projection: string;
 
-  // Capas GeoJSON cargadas por el usuario
   layers: GeoJSONLayer[];
 
-  // SRE al que el usuario quiere reproyectar la capa
   layerTargetProjection?: string | null;
 
   reprojectedLayer?: unknown | null;
+
+  activeCategories: Set<string>;
 
   onLayerProjectionChange: (
     info: LayerProjectionInfo
@@ -63,11 +66,39 @@ interface MapComponentProps {
   ) => void;
 }
 
+function createCategoryStyle(activeCategories: Set<string>) {
+  return (feature: FeatureLike) => {
+    const category = getFeatureCategory(
+      feature.getProperties() as Record<string, unknown>
+    );
+
+    if (!activeCategories.has(category)) {
+      return undefined;
+    }
+
+    return new Style({
+      image: new CircleStyle({
+        radius: 7,
+
+        fill: new Fill({
+          color: getCategoryColor(category),
+        }),
+
+        stroke: new Stroke({
+          color: "white",
+          width: 2,
+        }),
+      }),
+    });
+  };
+}
+
 function MapComponent({
   projection,
   layers,
   layerTargetProjection,
   reprojectedLayer,
+  activeCategories,
   onLayerProjectionChange,
   onCoordinateCapture,
 }: MapComponentProps) {
@@ -77,12 +108,6 @@ function MapComponent({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    /*
-     * ================================================
-     * 1. Detectar SRE original de la capa
-     * ================================================
-     */
-
     fetch("/data/deportivos.geojson")
       .then((response) => response.json())
       .then((data) => {
@@ -91,40 +116,14 @@ function MapComponent({
         );
       });
 
-    /*
-     * ================================================
-     * 2. Crear fuente de la capa deportiva
-     * ================================================
-     */
-
     const deportivosSource =
       new VectorSource();
 
     const deportivosLayer =
       new VectorLayer({
         source: deportivosSource,
-
-        style: new Style({
-          image: new CircleStyle({
-            radius: 7,
-
-            fill: new Fill({
-              color: "red",
-            }),
-
-            stroke: new Stroke({
-              color: "white",
-              width: 2,
-            }),
-          }),
-        }),
+        style: createCategoryStyle(activeCategories),
       });
-  
-    /*
-     * ================================================
-     * 2.5. Crear las capas GeoJSON del usuario
-     * ================================================
-     */
 
     const uploadedLayers = layers.map((layer) => {
       const source = new VectorSource();
@@ -134,20 +133,7 @@ function MapComponent({
 
         visible: layer.visible,
 
-        style: new Style({
-          image: new CircleStyle({
-            radius: 6,
-
-            fill: new Fill({
-              color: "#1976d2",
-            }),
-
-            stroke: new Stroke({
-              color: "white",
-              width: 2,
-            }),
-          }),
-        }),
+        style: createCategoryStyle(activeCategories),
       });
 
       const sourceProjection =
@@ -161,56 +147,21 @@ function MapComponent({
 
       source.addFeatures(features);
 
-      console.log(
-        `Capa cargada: ${layer.name}`
-      );
-
-      console.log(
-        `SRE de la capa: ${sourceProjection}`
-      );
-
-      console.log(
-        `SRE del visor: ${projection}`
-      );
-
       return vectorLayer;
     });
-
-    /*
-     * ================================================
-     * 3. Cargar la capa
-     * ================================================
-     */
 
     fetch("/data/deportivos.geojson")
       .then((response) => response.json())
       .then((data) => {
-
-        /*
-        * Si existe una capa reproyectada,
-        * usamos esa.
-        *
-        * Si todavía no se ha reproyectado,
-        * usamos la capa original.
-        */
         const dataToDisplay =
           reprojectedLayer ?? data;
 
-        /*
-        * Determinamos el SRE en el que
-        * están actualmente los datos.
-        */
         const sourceProjection =
           reprojectedLayer &&
           layerTargetProjection
             ? layerTargetProjection
             : "EPSG:4326";
 
-        /*
-        * Para visualizar la capa en OpenLayers,
-        * siempre la transformamos al SRE
-        * utilizado por el visor.
-        */
         const features = reprojectGeoJSON(
           dataToDisplay,
           sourceProjection,
@@ -220,25 +171,7 @@ function MapComponent({
         deportivosSource.addFeatures(
           features
         );
-
-        /*
-        * Información de depuración.
-        */
-        console.log(
-          "SRE de los datos:",
-          sourceProjection
-        );
-
-        console.log(
-          "SRE del visor:",
-          projection
-        );
       });
-    /*
-     * ================================================
-     * 4. Capa del punto capturado
-     * ================================================
-     */
 
     const captureSource =
       new VectorSource();
@@ -262,12 +195,6 @@ function MapComponent({
           }),
         }),
       });
-
-    /*
-     * ================================================
-     * 5. Crear mapa
-     * ================================================
-     */
 
     const map = new Map({
       target: mapRef.current,
@@ -301,12 +228,6 @@ function MapComponent({
       }),
     });
 
-    /*
-     * ================================================
-     * 6. Popup
-     * ================================================
-     */
-
     const popupElement =
       document.createElement("div");
 
@@ -338,14 +259,24 @@ function MapComponent({
           return;
         }
 
+        const properties =
+          feature.getProperties() as Record<
+            string,
+            unknown
+          >;
+
         const nombre =
-          feature.get("nombre");
+          properties["nombre"] ?? "Sin nombre";
 
         const municipio =
-          feature.get("municipio");
+          properties["municipio"] ?? "-";
 
         const tipo =
-          feature.get("tipo");
+          properties["tipo"] ?? "-";
+
+        const categoria = getCategoryLabel(
+          getFeatureCategory(properties)
+        );
 
         popupElement.innerHTML = `
           <strong>${nombre}</strong>
@@ -353,6 +284,8 @@ function MapComponent({
           Municipio: ${municipio}
           <br />
           Tipo: ${tipo}
+          <br />
+          Categoría: ${categoria}
         `;
 
         popupElement.style.display =
@@ -363,12 +296,6 @@ function MapComponent({
         );
       }
     );
-
-    /*
-     * ================================================
-     * 7. Captura de coordenadas
-     * ================================================
-     */
 
     map.on(
       "singleclick",
@@ -428,12 +355,6 @@ function MapComponent({
       }
     );
 
-    /*
-     * ================================================
-     * 8. Limpieza
-     * ================================================
-     */
-
     return () => {
       map.setTarget(undefined);
     };
@@ -442,6 +363,7 @@ function MapComponent({
     layers,
     layerTargetProjection,
     reprojectedLayer,
+    activeCategories,
     onLayerProjectionChange,
     onCoordinateCapture,
   ]);

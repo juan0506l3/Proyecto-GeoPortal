@@ -1,16 +1,13 @@
 import { useState } from "react";
 import MapComponent from "./components/Map";
-import ProjectionSelector from "./components/ProjectionSelector";
-import LayerSrsInfo from "./components/LayerSrsInfo";
-import CoordinateCapture from "./components/CoordinateCapture";
+import Sidebar from "./components/Sidebar";
 import type { LayerProjectionInfo } from "./projections/detectLayerProjection";
 import type { CapturedPoint } from "./projections/types";
-import LayerProjectionControl from "./components/LayerProjectionControl";
 import { reprojectGeoJSONData } from "./projections/reproject";
-import GeoJSONUploader from "./components/GeoJSONUploader";
 import type { GeoJSONLayer } from "./projections/layers";
 import { detectLayerProjection } from "./projections/detectLayerProjection";
-import LayerList from "./components/LayerList";
+import { EVENT_CATEGORIES } from "./projections/eventCategories";
+import "./App.css";
 
 function App() {
   // SRE del visor
@@ -41,6 +38,25 @@ function App() {
   const [layers, setLayers] =
     useState<GeoJSONLayer[]>([]);
 
+  // Categorías de evento activas en el panel "Filtrar eventos"
+  const [activeCategories, setActiveCategories] = useState<Set<string>>(
+    () => new Set(EVENT_CATEGORIES.map((category) => category.id))
+  );
+
+  const handleToggleCategory = (categoryId: string) => {
+    setActiveCategories((previous) => {
+      const next = new Set(previous);
+
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+
+      return next;
+    });
+  };
+
   const handleReproject = async () => {
     if (!layerProjection) {
       console.log(
@@ -65,19 +81,6 @@ function App() {
       setReprojectedLayer(result);
       setLayerTargetProjection(
         targetProjection
-      );
-
-      console.log(
-        "Reproyección completada:"
-      );
-
-      console.log(
-        `${layerProjection.code} → ${targetProjection}`
-      );
-
-      console.log(
-        "GeoJSON reproyectado:",
-        result
       );
     } catch (error) {
       console.error(
@@ -106,11 +109,6 @@ function App() {
       ...previousLayers,
       newLayer,
     ]);
-
-    console.log(
-      "Nueva capa cargada:",
-      newLayer
-    );
   };
 
   const handleLayerVisibilityChange = (
@@ -126,93 +124,79 @@ function App() {
     );
   };
 
+  const handleLayerDelete = (id: string) => {
+    setLayers((previousLayers) =>
+      previousLayers.filter((layer) => layer.id !== id)
+    );
+  };
+
+  const handleLayerDownload = (id: string) => {
+    const layer = layers.find((item) => item.id === id);
+
+    if (!layer) return;
+
+    const blob = new Blob(
+      [JSON.stringify(layer.data, null, 2)],
+      { type: "application/geo+json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = layer.name.toLowerCase().endsWith(".geojson")
+      ? layer.name
+      : `${layer.name}.geojson`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div>
-      <h1>GeoPortal</h1>
+    <div className="app-layout">
+      <header className="app-layout__header">
+        <h1>GeoPortal</h1>
+      </header>
 
-      <ProjectionSelector
-        projection={projection}
-        onChange={setProjection}
-      />
+      <div className="app-layout__body">
+        <MapComponent
+          projection={projection}
+          layers={layers}
+          layerTargetProjection={
+            layerTargetProjection
+          }
+          reprojectedLayer={
+            reprojectedLayer
+          }
+          activeCategories={activeCategories}
+          onLayerProjectionChange={
+            setLayerProjection
+          }
+          onCoordinateCapture={
+            setCapturedPoint
+          }
+        />
 
-      <p>
-        <strong>
-          SRE actual del visor:
-        </strong>{" "}
-        {projection}
-      </p>
-
-      <LayerSrsInfo
-        info={layerProjection}
-      />
-
-      <LayerProjectionControl
-        layerProjection={
-          layerProjection?.code ??
-          "Desconocido"
-        }
-        targetProjection={
-          targetProjection
-        }
-        onTargetProjectionChange={
-          setTargetProjection
-        }
-        onReproject={
-          handleReproject
-        }
-      />
-
-      <GeoJSONUploader
-        onFileLoaded={
-          handleGeoJSONLoaded
-        }
-      />
-
-      <LayerList
-        layers={layers}
-        onVisibilityChange={
-          handleLayerVisibilityChange
-        }
-      />
-
-      {layerTargetProjection && (
-        <div>
-          <p>
-            <strong>
-              SRE de la capa reproyectada:
-            </strong>{" "}
-            {layerTargetProjection}
-          </p>
-
-          <p>
-            <strong>
-              Estado:
-            </strong>{" "}
-            Reproyección completada
-          </p>
-        </div>
-      )}
-
-      <CoordinateCapture
-        point={capturedPoint}
-      />
-
-      <MapComponent
-        projection={projection}
-        layers={layers}
-        layerTargetProjection={
-          layerTargetProjection
-        }
-        reprojectedLayer={
-          reprojectedLayer
-        }
-        onLayerProjectionChange={
-          setLayerProjection
-        }
-        onCoordinateCapture={
-          setCapturedPoint
-        }
-      />
+        <Sidebar
+          capturedPoint={capturedPoint}
+          onFileLoaded={handleGeoJSONLoaded}
+          activeCategories={activeCategories}
+          onToggleCategory={handleToggleCategory}
+          layers={layers}
+          onLayerVisibilityChange={handleLayerVisibilityChange}
+          onLayerDelete={handleLayerDelete}
+          onLayerDownload={handleLayerDownload}
+          projection={projection}
+          onProjectionChange={setProjection}
+          layerProjection={layerProjection}
+          targetProjection={targetProjection}
+          onTargetProjectionChange={setTargetProjection}
+          onReproject={handleReproject}
+        />
+      </div>
     </div>
   );
 }
