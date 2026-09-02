@@ -1,124 +1,129 @@
 .layer-list {
-    background: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 14px 16px;
-    margin: 10px 0;
-  }
-  
-  .layer-list__title {
-    margin: 0 0 10px 0;
-    font-size: 13px;
-    font-weight: 700;
-    color: #333333;
-  }
-  
-  .layer-list__empty {
-    margin: 0;
-    font-size: 13px;
-    color: #777777;
-  }
-  
-  .layer-card {
-    border: 1px solid #e5e5e5;
-    border-radius: 6px;
-    padding: 10px 12px;
-    margin-bottom: 10px;
-  }
-  
-  .layer-card:last-child {
-    margin-bottom: 0;
-  }
-  
-  .layer-card__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  
-  .layer-card__name {
-    font-size: 13px;
-    font-weight: 600;
-    color: #111111;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .layer-card__actions {
-    display: flex;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-  
-  .layer-card__icon-btn {
-    border: none;
-    background: transparent;
-    color: #555555;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    display: flex;
-  }
-  
-  .layer-card__icon-btn:hover {
-    background: #f0f0f0;
-    color: #111111;
-  }
-  
-  .layer-card__icon-btn--danger:hover {
-    background: #fdecea;
-    color: #c62828;
-  }
-  
-  .layer-card__crs {
-    margin-top: 6px;
-    font-size: 12px;
-    color: #555555;
-  }
-  
-  .layer-card__transform-row {
-    margin-top: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  
-  .layer-card__transform-badge {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 3px 6px;
-    border-radius: 4px;
-    background: #f0f0f0;
-    color: #333333;
-  }
-  
-  .layer-card__transform-badge--dest {
-    background: #e8f0fe;
-    color: #1a56db;
-  }
-  
-  .layer-card__transform-arrow {
-    color: #999999;
-    font-size: 12px;
-  }
-  
-  .layer-card__download {
-    margin-top: 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    border: 1px solid #cccccc;
-    background: #fafafa;
-    color: #333333;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .layer-card__download:hover {
-    background: #eeeeee;
-  }
+  background: var(--gp-surface);
+  border: 1px solid var(--gp-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.layer-list__title {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gp-ink);
+}
+
+.layer-list__empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gp-muted);
+}
+
+.layer-card {
+  border: 1px solid var(--gp-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--gp-surface-alt);
+}
+
+.layer-card:last-child {
+  margin-bottom: 0;
+}
+
+.layer-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.layer-card__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gp-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-card__actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.layer-card__icon-btn {
+  border: none;
+  background: transparent;
+  color: var(--gp-muted);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 5px;
+  display: flex;
+}
+
+.layer-card__icon-btn:hover {
+  background: var(--gp-primary-soft);
+  color: var(--gp-primary-dark);
+}
+
+.layer-card__icon-btn--danger:hover {
+  background: var(--gp-danger-soft);
+  color: var(--gp-danger);
+}
+
+.layer-card__crs {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--gp-muted);
+}
+
+.layer-card__transform-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.layer-card__transform-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--gp-surface);
+  border: 1px solid var(--gp-border);
+  color: var(--gp-muted);
+}
+
+.layer-card__transform-badge--dest {
+  background: var(--gp-primary-soft);
+  border-color: #c7dbf0;
+  color: var(--gp-primary-dark);
+}
+
+.layer-card__transform-arrow {
+  color: var(--gp-muted);
+  font-size: 12px;
+}
+
+.layer-card__download {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--gp-border);
+  background: var(--gp-surface);
+  color: var(--gp-ink);
+  padding: 6px 11px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.layer-card__download:hover {
+  background: var(--gp-primary-soft);
+  border-color: #c7dbf0;
+  color: var(--gp-primary-dark);
+}

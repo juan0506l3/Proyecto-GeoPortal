@@ -1,0 +1,86 @@
+.projection-control {
+    background: var(--gp-surface);
+    border: 1px solid var(--gp-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  
+  .projection-control__label,
+  .reproject-panel__label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--gp-muted);
+    margin-bottom: 6px;
+  }
+  
+  .projection-control__select,
+  .reproject-panel select {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13.5px;
+    color: var(--gp-ink);
+    background: var(--gp-surface);
+    border: 1px solid var(--gp-border);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  
+  .projection-control__select:focus,
+  .reproject-panel select:focus {
+    outline: 2px solid var(--gp-primary);
+    outline-offset: 1px;
+  }
+  
+  .reproject-panel {
+    background: var(--gp-surface);
+    border: 1px solid var(--gp-border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  
+  .reproject-panel__title {
+    margin: 0 0 10px 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gp-ink);
+  }
+  
+  .reproject-panel__current {
+    margin: 0 0 12px 0;
+    font-size: 12.5px;
+    color: var(--gp-muted);
+  }
+  
+  .reproject-panel__current strong {
+    color: var(--gp-ink);
+  }
+  
+  .reproject-panel label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--gp-muted);
+    margin-bottom: 6px;
+  }
+  
+  .reproject-panel select {
+    margin-bottom: 12px;
+  }
+  
+  .reproject-panel__button {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gp-primary-dark);
+    background: var(--gp-primary-soft);
+    border: 1px solid #c7dbf0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  
+  .reproject-panel__button:hover {
+    background: #d7e6f6;
+  }

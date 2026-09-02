@@ -1,49 +1,51 @@
 .info-panel {
-  background: #ffffff;
-  border: 1px solid #cccccc;
-  border-radius: 4px;
-  padding: 10px 14px;
-  margin: 10px 0;
-  color: #000000;
+  background: var(--gp-surface);
+  border: 1px solid var(--gp-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: var(--gp-ink);
 }
 
 .info-panel__title {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  font-weight: bold;
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gp-ink);
 }
 
 .info-panel__muted {
   margin: 4px 0 0 0;
-  font-size: 13px;
-  color: #555555;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--gp-muted);
 }
 
 .info-panel__label {
   margin: 4px 0 0 0;
   font-size: 14px;
+  color: var(--gp-ink);
 }
 
 .info-panel__badge {
   display: inline-block;
-  font-family: "Consolas", monospace;
-  font-size: 13px;
-  font-weight: bold;
-  background: #f0f0f0;
-  color: #000000;
-  border: 1px solid #cccccc;
-  border-radius: 3px;
-  padding: 2px 6px;
+  font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--gp-primary-soft);
+  color: var(--gp-primary-dark);
+  border: 1px solid #c7dbf0;
+  border-radius: 5px;
+  padding: 2px 7px;
 }
 
 .info-panel__badge--sm {
   font-size: 11px;
-  padding: 1px 5px;
+  padding: 1px 6px;
 }
 
 .coord-list {
   list-style: none;
-  margin: 8px 0 0 0;
+  margin: 10px 0 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -55,9 +57,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 6px 8px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  padding: 7px 9px;
+  background: var(--gp-surface-alt);
+  border: 1px solid var(--gp-border);
+  border-radius: 6px;
   flex-wrap: wrap;
 }
 
@@ -70,7 +73,7 @@
 
 .coord-list__name {
   font-size: 12px;
-  color: #555555;
+  color: var(--gp-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -83,21 +86,22 @@
 }
 
 .coord-list__value code {
-  font-family: "Consolas", monospace;
+  font-family: "Consolas", "SFMono-Regular", Menlo, monospace;
   font-size: 13px;
-  color: #000000;
+  color: var(--gp-ink);
 }
 
 .coord-list__copy {
   font-size: 11px;
-  padding: 2px 7px;
-  border-radius: 3px;
-  border: 1px solid #cccccc;
-  background: #f0f0f0;
-  color: #000000;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--gp-border);
+  background: var(--gp-surface);
+  color: var(--gp-primary-dark);
   cursor: pointer;
 }
 
 .coord-list__copy:hover {
-  background: #e0e0e0;
+  background: var(--gp-primary-soft);
+  border-color: #c7dbf0;
 }

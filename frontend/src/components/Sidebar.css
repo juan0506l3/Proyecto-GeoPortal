@@ -1,21 +1,49 @@
-.sidebar {
+   .sidebar {
+    --gp-ink: #17263d;
+    --gp-muted: #5b6b7c;
+    --gp-primary: #205295;
+    --gp-primary-dark: #163d6b;
+    --gp-primary-soft: #e8f0fa;
+    --gp-accent: #2f9e68;
+    --gp-accent-soft: #e7f5ee;
+    --gp-danger: #c0392b;
+    --gp-danger-soft: #fbeae8;
+    --gp-surface: #ffffff;
+    --gp-surface-alt: #eef2f6;
+    --gp-border: #d7e1ea;
+  
     width: 360px;
     min-width: 320px;
     max-width: 360px;
     height: 100%;
-    background: #f7f8fa;
-    border-left: 1px solid #e0e0e0;
+    background: var(--gp-surface-alt);
+    border-left: 1px solid var(--gp-border);
     display: flex;
     flex-direction: column;
+    color: var(--gp-ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   
   .sidebar__scroll {
     overflow-y: auto;
     height: 100%;
-    padding: 16px;
+    padding: 18px 16px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 14px;
+  }
+  
+  .sidebar__scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .sidebar__scroll::-webkit-scrollbar-thumb {
+    background: #c3d0da;
+    border-radius: 4px;
+  }
+  
+  .sidebar__scroll::-webkit-scrollbar-track {
+    background: transparent;
   }
   
   @media (max-width: 900px) {
@@ -24,6 +52,6 @@
       max-width: 100%;
       min-width: 0;
       border-left: none;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid var(--gp-border);
     }
   }
