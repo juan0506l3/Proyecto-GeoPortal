@@ -8,6 +8,7 @@ export interface EventCategory {
     { id: "musica", label: "Evento de música", color: "#8e44ad" },
     { id: "deportivo", label: "Evento deportivo", color: "#e53935" },
     { id: "familiar", label: "Evento familiar", color: "#43a047" },
+    { id: "otros", label: "Otros / sin categoría", color: "#757575" },
   ];
   
   const TIPO_TO_CATEGORY: Record<string, string> = {

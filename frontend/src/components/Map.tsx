@@ -40,30 +40,16 @@ import type { CapturedPoint } from "../projections/types";
 
 import type { GeoJSONLayer } from "../projections/layers";
 
-const CAPTURE_TARGETS = [
-  "EPSG:4326",
-  "EPSG:3857",
-  "EPSG:9377",
-];
+const CAPTURE_TARGETS = ["EPSG:4326", "EPSG:3857", "EPSG:9377"];
 
 interface MapComponentProps {
   projection: string;
-
   layers: GeoJSONLayer[];
-
   layerTargetProjection?: string | null;
-
   reprojectedLayer?: unknown | null;
-
   activeCategories: Set<string>;
-
-  onLayerProjectionChange: (
-    info: LayerProjectionInfo
-  ) => void;
-
-  onCoordinateCapture?: (
-    point: CapturedPoint
-  ) => void;
+  onLayerProjectionChange: (info: LayerProjectionInfo) => void;
+  onCoordinateCapture?: (point: CapturedPoint) => void;
 }
 
 function createCategoryStyle(activeCategories: Set<string>) {
@@ -79,15 +65,8 @@ function createCategoryStyle(activeCategories: Set<string>) {
     return new Style({
       image: new CircleStyle({
         radius: 7,
-
-        fill: new Fill({
-          color: getCategoryColor(category),
-        }),
-
-        stroke: new Stroke({
-          color: "white",
-          width: 2,
-        }),
+        fill: new Fill({ color: getCategoryColor(category) }),
+        stroke: new Stroke({ color: "white", width: 2 }),
       }),
     });
   };
@@ -102,8 +81,15 @@ function MapComponent({
   onLayerProjectionChange,
   onCoordinateCapture,
 }: MapComponentProps) {
-  const mapRef =
-    useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<HTMLDivElement | null>(null);
+
+  // 🆕 Recuerda dónde estaba el usuario mirando (centro/zoom/proyección)
+  // para no resetear la vista cada vez que cambian los filtros o las capas.
+  const viewStateRef = useRef<{
+    center: [number, number];
+    zoom: number;
+    projection: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -111,39 +97,28 @@ function MapComponent({
     fetch("/data/deportivos.geojson")
       .then((response) => response.json())
       .then((data) => {
-        onLayerProjectionChange(
-          detectLayerProjection(data)
-        );
+        onLayerProjectionChange(detectLayerProjection(data));
       });
 
-    const deportivosSource =
-      new VectorSource();
+    const deportivosSource = new VectorSource();
 
-    const deportivosLayer =
-      new VectorLayer({
-        source: deportivosSource,
-        style: createCategoryStyle(activeCategories),
-      });
+    const deportivosLayer = new VectorLayer({
+      source: deportivosSource,
+      style: createCategoryStyle(activeCategories),
+    });
 
     const uploadedLayers = layers.map((layer) => {
       const source = new VectorSource();
 
       const vectorLayer = new VectorLayer({
         source,
-
         visible: layer.visible,
-
         style: createCategoryStyle(activeCategories),
       });
 
-      const sourceProjection =
-        layer.projection.code;
+      const sourceProjection = layer.projection.code;
 
-      const features = reprojectGeoJSON(
-        layer.data,
-        sourceProjection,
-        projection
-      );
+      const features = reprojectGeoJSON(layer.data, sourceProjection, projection);
 
       source.addFeatures(features);
 
@@ -153,86 +128,57 @@ function MapComponent({
     fetch("/data/deportivos.geojson")
       .then((response) => response.json())
       .then((data) => {
-        const dataToDisplay =
-          reprojectedLayer ?? data;
+        const dataToDisplay = reprojectedLayer ?? data;
 
         const sourceProjection =
-          reprojectedLayer &&
-          layerTargetProjection
+          reprojectedLayer && layerTargetProjection
             ? layerTargetProjection
             : "EPSG:4326";
 
-        const features = reprojectGeoJSON(
-          dataToDisplay,
-          sourceProjection,
-          projection
-        );
+        const features = reprojectGeoJSON(dataToDisplay, sourceProjection, projection);
 
-        deportivosSource.addFeatures(
-          features
-        );
+        deportivosSource.addFeatures(features);
       });
 
-    const captureSource =
-      new VectorSource();
+    const captureSource = new VectorSource();
 
-    const captureLayer =
-      new VectorLayer({
-        source: captureSource,
-
-        style: new Style({
-          image: new CircleStyle({
-            radius: 8,
-
-            fill: new Fill({
-              color: "#1e88e5",
-            }),
-
-            stroke: new Stroke({
-              color: "white",
-              width: 2,
-            }),
-          }),
+    const captureLayer = new VectorLayer({
+      source: captureSource,
+      style: new Style({
+        image: new CircleStyle({
+          radius: 8,
+          fill: new Fill({ color: "#1e88e5" }),
+          stroke: new Stroke({ color: "white", width: 2 }),
         }),
-      });
-
-    const map = new Map({
-      target: mapRef.current,
-
-      layers: [
-        new TileLayer({
-          source: new OSM(),
-        }),
-
-        deportivosLayer,
-
-        ...uploadedLayers,
-
-        captureLayer,
-      ],
-
-      view: new View({
-        projection:
-          getProjection(projection) ??
-          undefined,
-
-        center:
-          projection === "EPSG:4326"
-            ? [-75.58, 6.17]
-            : fromLonLat([
-                -75.58,
-                6.17,
-              ]),
-
-        zoom: 12,
       }),
     });
 
-    const popupElement =
-      document.createElement("div");
+    // 🆕 Si ya había una vista guardada, la reutilizamos (convertida al
+    // sistema activo); si no, usamos el centro por defecto del proyecto.
+    const saved = viewStateRef.current;
+    const defaultCenter =
+      projection === "EPSG:4326"
+        ? ([-75.58, 6.17] as [number, number])
+        : (fromLonLat([-75.58, 6.17]) as [number, number]);
 
-    popupElement.className =
-      "map-popup";
+    const initialCenter = saved
+      ? transformCoordinate(saved.center, saved.projection, projection)
+      : defaultCenter;
+
+    const initialZoom = saved ? saved.zoom : 12;
+
+    const map = new Map({
+      target: mapRef.current,
+      layers: [new TileLayer({ source: new OSM() }), deportivosLayer, ...uploadedLayers, captureLayer],
+      view: new View({
+        projection: getProjection(projection) ?? undefined,
+        center: initialCenter,
+        zoom: initialZoom,
+      }),
+    });
+
+    const popupElement = document.createElement("div");
+    popupElement.className = "map-popup";
 
     const popup = new Overlay({
       element: popupElement,
@@ -243,119 +189,69 @@ function MapComponent({
 
     map.addOverlay(popup);
 
-    map.on(
-      "singleclick",
-      (event) => {
-        const feature =
-          map.forEachFeatureAtPixel(
-            event.pixel,
-            (feature) => feature
-          );
+    map.on("singleclick", (event) => {
+      const feature = map.forEachFeatureAtPixel(event.pixel, (feature) => feature);
 
-        if (!feature) {
-          popupElement.style.display =
-            "none";
-
-          return;
-        }
-
-        const properties =
-          feature.getProperties() as Record<
-            string,
-            unknown
-          >;
-
-        const nombre =
-          properties["nombre"] ?? "Sin nombre";
-
-        const municipio =
-          properties["municipio"] ?? "-";
-
-        const tipo =
-          properties["tipo"] ?? "-";
-
-        const categoria = getCategoryLabel(
-          getFeatureCategory(properties)
-        );
-
-        popupElement.innerHTML = `
-          <strong>${nombre}</strong>
-          <br />
-          Municipio: ${municipio}
-          <br />
-          Tipo: ${tipo}
-          <br />
-          Categoría: ${categoria}
-        `;
-
-        popupElement.style.display =
-          "block";
-
-        popup.setPosition(
-          event.coordinate
-        );
+      if (!feature) {
+        popupElement.style.display = "none";
+        return;
       }
-    );
 
-    map.on(
-      "singleclick",
-      (event) => {
-        const clicked =
-          event.coordinate as [
-            number,
-            number
-          ];
+      const properties = feature.getProperties() as Record<string, unknown>;
+      const nombre = properties["nombre"] ?? "Sin nombre";
+      const municipio = properties["municipio"] ?? "-";
+      const tipo = properties["tipo"] ?? "-";
+      const categoria = getCategoryLabel(getFeatureCategory(properties));
 
-        captureSource.clear();
+      popupElement.innerHTML = `
+        <strong>${nombre}</strong>
+        <br />
+        Municipio: ${municipio}
+        <br />
+        Tipo: ${tipo}
+        <br />
+        Categoría: ${categoria}
+      `;
 
-        captureSource.addFeature(
-          new Feature(
-            new Point(clicked)
-          )
-        );
+      popupElement.style.display = "block";
+      popup.setPosition(event.coordinate);
+    });
 
-        if (!onCoordinateCapture)
-          return;
+    map.on("singleclick", (event) => {
+      const clicked = event.coordinate as [number, number];
 
-        const entries =
-          CAPTURE_TARGETS.map(
-            (code) => {
-              const [x, y] =
-                transformCoordinate(
-                  clicked,
-                  projection,
-                  code
-                );
+      captureSource.clear();
+      captureSource.addFeature(new Feature(new Point(clicked)));
 
-              return {
-                code,
+      if (!onCoordinateCapture) return;
 
-                label:
-                  getProjectionLabel(
-                    code
-                  ),
+      const entries = CAPTURE_TARGETS.map((code) => {
+        const [x, y] = transformCoordinate(clicked, projection, code);
+        return {
+          code,
+          label: getProjectionLabel(code),
+          x,
+          y,
+          unit: isGeographic(code) ? ("deg" as const) : ("m" as const),
+        };
+      });
 
-                x,
-                y,
-
-                unit:
-                  isGeographic(code)
-                    ? ("deg" as const)
-                    : ("m" as const),
-              };
-            }
-          );
-
-        onCoordinateCapture({
-          viewProjection:
-            projection,
-
-          entries,
-        });
-      }
-    );
+      onCoordinateCapture({ viewProjection: projection, entries });
+    });
 
     return () => {
+      // 🆕 Guarda dónde estaba mirando el usuario antes de destruir el mapa
+      const currentView = map.getView();
+      const center = currentView.getCenter();
+
+      if (center) {
+        viewStateRef.current = {
+          center: center as [number, number],
+          zoom: currentView.getZoom() ?? 12,
+          projection,
+        };
+      }
+
       map.setTarget(undefined);
     };
   }, [
@@ -368,12 +264,7 @@ function MapComponent({
     onCoordinateCapture,
   ]);
 
-  return (
-    <div
-      ref={mapRef}
-      className="map-container"
-    />
-  );
+  return <div ref={mapRef} className="map-container" />;
 }
 
 export default MapComponent;
