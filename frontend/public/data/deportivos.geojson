@@ -1,49 +1,38 @@
 {
   "type": "FeatureCollection",
-  "crs": {
-    "type": "name",
-    "properties": {
-      "name": "EPSG:4326"
-    }
-  },
+  "crs": { "type": "name", "properties": { "name": "EPSG:4326" } },
   "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "nombre": "Unidad Deportiva Zona Sur",
-        "municipio": "Sabaneta",
-        "tipo": "Unidad deportiva"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [-75.616, 6.151]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "nombre": "Polideportivo Óscar López Escobar",
-        "municipio": "Itagüí",
-        "tipo": "Polideportivo"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [-75.61, 6.17]
-      }
-      
-      
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "nombre": "Complejo Deportivo Ditaires",
-        "municipio": "Itagüí",
-        "tipo": "Complejo deportivo"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [-75.62, 6.17]
-      }
-    }
+    { "type": "Feature", "properties": { "nombre": "Parque Principal de Bello", "municipio": "Bello", "categoria": "musica", "tipo": "Plaza central con música en vivo y eventos", "direccion": "Cra. 50 #50-01, Prado" }, "geometry": { "type": "Point", "coordinates": [-75.5584404, 6.3349726] } },
+    { "type": "Feature", "properties": { "nombre": "Polideportivo Tulio Ospina", "municipio": "Bello", "categoria": "deportivo", "tipo": "Parque deportivo con canchas y ciclovía", "direccion": "Av. 42A #49-20, Panamericano" }, "geometry": { "type": "Point", "coordinates": [-75.5482405, 6.3349242] } },
+    { "type": "Feature", "properties": { "nombre": "Centro Comercial Puerta del Norte", "municipio": "Bello", "categoria": "familiar", "tipo": "Centro comercial con zona infantil", "direccion": "Autopista Norte #34-67, Hermosa Provincia" }, "geometry": { "type": "Point", "coordinates": [-75.5430007, 6.339319] } },
+    { "type": "Feature", "properties": { "nombre": "Estación Niquía (Metro)", "municipio": "Bello", "categoria": "otros", "tipo": "Estación de transporte masivo", "direccion": "Hermosa Provincia" }, "geometry": { "type": "Point", "coordinates": [-75.5443006, 6.3378168] } },
+
+    { "type": "Feature", "properties": { "nombre": "La Macarena", "municipio": "Medellín", "categoria": "musica", "tipo": "Recinto de conciertos (antigua plaza de toros)", "direccion": "Cra. 63A #45A-48, Laureles - Estadio" }, "geometry": { "type": "Point", "coordinates": [-75.5802323, 6.2494542] } },
+    { "type": "Feature", "properties": { "nombre": "Teatro Metropolitano de Medellín", "municipio": "Medellín", "categoria": "musica", "tipo": "Teatro y sala de conciertos", "direccion": "Cl. 41 #57-30, La Candelaria" }, "geometry": { "type": "Point", "coordinates": [-75.5774573, 6.2430224] } },
+    { "type": "Feature", "properties": { "nombre": "Estadio Atanasio Girardot", "municipio": "Medellín", "categoria": "deportivo", "tipo": "Complejo deportivo y estadio de fútbol", "direccion": "Cra. 74 #48-010, Laureles - Estadio" }, "geometry": { "type": "Point", "coordinates": [-75.5901729, 6.256767] } },
+    { "type": "Feature", "properties": { "nombre": "Iván de Bedout Arena", "municipio": "Medellín", "categoria": "deportivo", "tipo": "Complejo deportivo multipropósito", "direccion": "Cra. 70 #48-193, Laureles - Estadio" }, "geometry": { "type": "Point", "coordinates": [-75.5879098, 6.2562478] } },
+    { "type": "Feature", "properties": { "nombre": "Parque Explora", "municipio": "Medellín", "categoria": "familiar", "tipo": "Museo interactivo y acuario para toda la familia", "direccion": "Cra. 52 #73-75, Aranjuez" }, "geometry": { "type": "Point", "coordinates": [-75.5656966, 6.2708025] } },
+    { "type": "Feature", "properties": { "nombre": "Jardín Botánico de Medellín", "municipio": "Medellín", "categoria": "familiar", "tipo": "Jardín botánico y parque familiar", "direccion": "Cl. 73 #51D-14, Aranjuez" }, "geometry": { "type": "Point", "coordinates": [-75.5648496, 6.2693605] } },
+    { "type": "Feature", "properties": { "nombre": "Plaza Mayor Medellín", "municipio": "Medellín", "categoria": "otros", "tipo": "Centro de convenciones y ferias", "direccion": "Cl. 41 #55-80, La Candelaria" }, "geometry": { "type": "Point", "coordinates": [-75.575787, 6.2431811] } },
+    { "type": "Feature", "properties": { "nombre": "Terminal del Norte", "municipio": "Medellín", "categoria": "otros", "tipo": "Terminal de transporte intermunicipal", "direccion": "Autonorte, Castilla" }, "geometry": { "type": "Point", "coordinates": [-75.5719863, 6.2779398] } },
+    { "type": "Feature", "properties": { "nombre": "Museo de Arte Moderno de Medellín (MAMM)", "municipio": "Medellín", "categoria": "otros", "tipo": "Museo y espacio de exposiciones", "direccion": "Cra. 44 #19A-100, El Poblado" }, "geometry": { "type": "Point", "coordinates": [-75.57384, 6.2237797] } },
+
+    { "type": "Feature", "properties": { "nombre": "Casa de la Cultura de Itagüí", "municipio": "Itagüí", "categoria": "musica", "tipo": "Centro cultural con talleres de música y artes", "direccion": "Cl. 36 #57-59, Pilsen" }, "geometry": { "type": "Point", "coordinates": [-75.6259299, 6.1692484] } },
+    { "type": "Feature", "properties": { "nombre": "Acuaparque Ditaires", "municipio": "Itagüí", "categoria": "deportivo", "tipo": "Complejo deportivo-recreativo acuático", "direccion": "Cl. 34B #53-57, Samaria" }, "geometry": { "type": "Point", "coordinates": [-75.6281441, 6.169487] } },
+    { "type": "Feature", "properties": { "nombre": "Polideportivo de Itagüí", "municipio": "Itagüí", "categoria": "deportivo", "tipo": "Polideportivo (fútbol y baloncesto)", "direccion": "Los Naranjos" }, "geometry": { "type": "Point", "coordinates": [-75.6059568, 6.1701787] } },
+    { "type": "Feature", "properties": { "nombre": "Parque de Itagüí", "municipio": "Itagüí", "categoria": "familiar", "tipo": "Parque principal con fuente y zonas verdes", "direccion": "Cl. 50 con Cra. 50, Villa Paula" }, "geometry": { "type": "Point", "coordinates": [-75.6094196, 6.1722873] } },
+    { "type": "Feature", "properties": { "nombre": "Alcaldía de Itagüí", "municipio": "Itagüí", "categoria": "otros", "tipo": "Sede administrativa municipal", "direccion": "Cl. 51 #51-55, Villa Paula" }, "geometry": { "type": "Point", "coordinates": [-75.6087973, 6.1734547] } },
+
+    { "type": "Feature", "properties": { "nombre": "Casa de la Cultura Miguel Uribe Restrepo", "municipio": "Envigado", "categoria": "musica", "tipo": "Casa cultural con presentaciones musicales", "direccion": "Cra. 45 #34 Sur-65, Zona 2" }, "geometry": { "type": "Point", "coordinates": [-75.5886383, 6.1731371] } },
+    { "type": "Feature", "properties": { "nombre": "Polideportivo Sur de Envigado", "municipio": "Envigado", "categoria": "deportivo", "tipo": "Polideportivo y gimnasio público", "direccion": "Cra. 48 #184-46, Poblado del Sur" }, "geometry": { "type": "Point", "coordinates": [-75.6001177, 6.1652176] } },
+    { "type": "Feature", "properties": { "nombre": "Unidad Deportiva de Envigado", "municipio": "Envigado", "categoria": "deportivo", "tipo": "Estadio y unidad deportiva", "direccion": "Zona 8" }, "geometry": { "type": "Point", "coordinates": [-75.6003173, 6.1651117] } },
+    { "type": "Feature", "properties": { "nombre": "Parque Principal de Envigado", "municipio": "Envigado", "categoria": "familiar", "tipo": "Parque principal con eventos familiares", "direccion": "Cra. 42 #37S-60, Zona 9" }, "geometry": { "type": "Point", "coordinates": [-75.5873738, 6.170049] } },
+    { "type": "Feature", "properties": { "nombre": "Universidad EIA", "municipio": "Envigado", "categoria": "otros", "tipo": "Institución educativa universitaria", "direccion": "Vereda El Peñasco" }, "geometry": { "type": "Point", "coordinates": [-75.516863, 6.157042] } },
+
+    { "type": "Feature", "properties": { "nombre": "Casa de la Cultura La Barquereña", "municipio": "Sabaneta", "categoria": "musica", "tipo": "Centro cultural con talleres de arte y música", "direccion": "Cl. 68 Sur #42-40" }, "geometry": { "type": "Point", "coordinates": [-75.6129507, 6.1504909] } },
+    { "type": "Feature", "properties": { "nombre": "Coliseo Sabaneta Norte", "municipio": "Sabaneta", "categoria": "deportivo", "tipo": "Coliseo y cancha sintética cubierta", "direccion": "Las Vegas #48" }, "geometry": { "type": "Point", "coordinates": [-75.6110514, 6.1577666] } },
+    { "type": "Feature", "properties": { "nombre": "Parque Principal de Sabaneta", "municipio": "Sabaneta", "categoria": "familiar", "tipo": "Parque principal con actividades familiares", "direccion": "Cra. 45 #68S-58" }, "geometry": { "type": "Point", "coordinates": [-75.6154297, 6.151473] } },
+    { "type": "Feature", "properties": { "nombre": "Mayorca Mall", "municipio": "Sabaneta", "categoria": "familiar", "tipo": "Centro comercial con zona infantil y cine", "direccion": "Cl. 51 Sur #48-57, Av. Regional" }, "geometry": { "type": "Point", "coordinates": [-75.6055153, 6.1618172] } },
+    { "type": "Feature", "properties": { "nombre": "Alcaldía de Sabaneta", "municipio": "Sabaneta", "categoria": "otros", "tipo": "Sede administrativa municipal", "direccion": "Cra. 45 #71 Sur-24" }, "geometry": { "type": "Point", "coordinates": [-75.6188465, 6.1495969] } }
   ]
 }
