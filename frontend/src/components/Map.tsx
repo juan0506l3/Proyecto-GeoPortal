@@ -3,7 +3,7 @@ import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
-import { fromLonLat, get as getProjection } from "ol/proj";
+import { get as getProjection } from "ol/proj";
 
 import "./Map.css";
 import "ol/ol.css";
@@ -153,13 +153,13 @@ function MapComponent({
       }),
     });
 
-    // 🆕 Si ya había una vista guardada, la reutilizamos (convertida al
-    // sistema activo); si no, usamos el centro por defecto del proyecto.
     const saved = viewStateRef.current;
-    const defaultCenter =
-      projection === "EPSG:4326"
-        ? ([-75.58, 6.17] as [number, number])
-        : (fromLonLat([-75.58, 6.17]) as [number, number]);
+    const defaultCenter = isGeographic(projection)
+      ? ([-75.58, 6.17] as [number, number])
+      : (transformCoordinate([-75.58, 6.17], "EPSG:4326", projection) as [
+          number,
+          number,
+        ]);
 
     const initialCenter = saved
       ? transformCoordinate(saved.center, saved.projection, projection)

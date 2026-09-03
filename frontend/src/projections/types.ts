@@ -4,6 +4,7 @@ label: string;
 x: number;
 y: number;
 unit: "deg" | "m";
+layerName: string
   }
   
 export interface CapturedPoint {

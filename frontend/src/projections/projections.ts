@@ -16,40 +16,37 @@ proj4.defs(
   "+proj=tmerc +lat_0=4 +lon_0=-73 +k=0.9992 +x_0=5000000 +y_0=2000000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 );
 
+proj4.defs(
+  "EPSG:4686",
+  "+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"
+);
+
+proj4.defs(
+  "EPSG:32618",
+  "+proj=utm +zone=18 +datum=WGS84 +units=m +no_defs"
+);
+
+proj4.defs(
+  "EPSG:3395",
+  "+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+);
+
 register(proj4);
 
 export const SUPPORTED_PROJECTIONS = [
-  {
-    code: "EPSG:4326",
-    name: "WGS 84",
-    type: "Geográfico",
-  },
-  {
-    code: "EPSG:3857",
-    name: "Web Mercator",
-    type: "Proyectado",
-  },
-  {
-    code: "EPSG:9377",
-    name: "MAGNA-SIRGAS / Origen-Nacional",
-    type: "Proyectado",
-  },
+  { code: "EPSG:4326", name: "WGS 84", type: "Geográfico" },
+  { code: "EPSG:3857", name: "Web Mercator", type: "Proyectado" },
+  { code: "EPSG:9377", name: "MAGNA-SIRGAS / Origen-Nacional", type: "Proyectado" },
+  { code: "EPSG:4686", name: "MAGNA-SIRGAS (geográfico)", type: "Geográfico" },
+  { code: "EPSG:32618", name: "UTM zona 18N (WGS84)", type: "Proyectado" },
+  { code: "EPSG:3395", name: "Mercator Mundial", type: "Proyectado" },
 ];
 
 export function getProjectionLabel(code: string): string {
-  const found = SUPPORTED_PROJECTIONS.find(
-    (p) => p.code === code
-  );
-
-  return found
-    ? `${found.code} · ${found.name}`
-    : code;
+  const found = SUPPORTED_PROJECTIONS.find((p) => p.code === code);
+  return found ? `${found.code} · ${found.name}` : code;
 }
 
 export function isGeographic(code: string): boolean {
-  return (
-    SUPPORTED_PROJECTIONS.find(
-      (p) => p.code === code
-    )?.type === "Geográfico"
-  );
+  return SUPPORTED_PROJECTIONS.find((p) => p.code === code)?.type === "Geográfico";
 }

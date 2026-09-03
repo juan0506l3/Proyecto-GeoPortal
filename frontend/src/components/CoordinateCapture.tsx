@@ -41,7 +41,7 @@ function CoordinateCapture({ point }: CoordinateCaptureProps) {
                     {entry.code}
                   </span>
                   <span className="coord-list__name">
-                    {entry.label.replace(`${entry.code} · `, "")}
+                    {entry.layerName}
                   </span>
                 </div>
 
