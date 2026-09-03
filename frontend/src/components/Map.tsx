@@ -40,8 +40,6 @@ import type { CapturedPoint } from "../projections/types";
 
 import type { GeoJSONLayer } from "../projections/layers";
 
-const CAPTURE_TARGETS = ["EPSG:4326", "EPSG:3857", "EPSG:9377"];
-
 interface MapComponentProps {
   projection: string;
   layers: GeoJSONLayer[];
@@ -83,8 +81,7 @@ function MapComponent({
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
 
-  // 🆕 Recuerda dónde estaba el usuario mirando (centro/zoom/proyección)
-  // para no resetear la vista cada vez que cambian los filtros o las capas.
+ 
   const viewStateRef = useRef<{
     center: [number, number];
     zoom: number;
@@ -107,6 +104,13 @@ function MapComponent({
       style: createCategoryStyle(activeCategories),
     });
 
+
+    deportivosLayer.set("layerName", "Eventos (deportivos.geojson)");
+    deportivosLayer.set(
+      "layerProjectionCode",
+      layerTargetProjection ?? "EPSG:4326"
+    );
+
     const uploadedLayers = layers.map((layer) => {
       const source = new VectorSource();
 
@@ -117,6 +121,9 @@ function MapComponent({
       });
 
       const sourceProjection = layer.projection.code;
+
+      vectorLayer.set("layerName", layer.name);
+      vectorLayer.set("layerProjectionCode", sourceProjection);
 
       const features = reprojectGeoJSON(layer.data, sourceProjection, projection);
 
@@ -190,34 +197,51 @@ function MapComponent({
     map.addOverlay(popup);
 
     map.on("singleclick", (event) => {
-      const feature = map.forEachFeatureAtPixel(event.pixel, (feature) => feature);
+      let hitFeature: FeatureLike | null = null;
+      let hitLayer: VectorLayer<VectorSource> | null = null;
 
-      if (!feature) {
+      
+      map.forEachFeatureAtPixel(
+        event.pixel,
+        (feature, layer) => {
+          hitFeature = feature;
+          hitLayer = layer as VectorLayer<VectorSource> | null;
+          return true;
+        },
+        {
+          layerFilter: (candidate) => candidate !== captureLayer,
+        }
+      );
+
+  
+      if (hitFeature) {
+        const properties = (hitFeature as FeatureLike).getProperties() as Record<
+          string,
+          unknown
+        >;
+        const nombre = properties["nombre"] ?? "Sin nombre";
+        const municipio = properties["municipio"] ?? "-";
+        const tipo = properties["tipo"] ?? "-";
+        const categoria = getCategoryLabel(getFeatureCategory(properties));
+
+        popupElement.innerHTML = `
+          <strong>${nombre}</strong>
+          <br />
+          Municipio: ${municipio}
+          <br />
+          Tipo: ${tipo}
+          <br />
+          Categoría: ${categoria}
+        `;
+
+        popupElement.style.display = "block";
+        popup.setPosition(event.coordinate);
+      } else {
         popupElement.style.display = "none";
-        return;
       }
 
-      const properties = feature.getProperties() as Record<string, unknown>;
-      const nombre = properties["nombre"] ?? "Sin nombre";
-      const municipio = properties["municipio"] ?? "-";
-      const tipo = properties["tipo"] ?? "-";
-      const categoria = getCategoryLabel(getFeatureCategory(properties));
-
-      popupElement.innerHTML = `
-        <strong>${nombre}</strong>
-        <br />
-        Municipio: ${municipio}
-        <br />
-        Tipo: ${tipo}
-        <br />
-        Categoría: ${categoria}
-      `;
-
-      popupElement.style.display = "block";
-      popup.setPosition(event.coordinate);
-    });
-
-    map.on("singleclick", (event) => {
+      // --- Captura de coordenadas: una sola entrada, en el SRE de la
+      // capa donde cayó el clic (o del mapa base si no hay capa) ---
       const clicked = event.coordinate as [number, number];
 
       captureSource.clear();
@@ -225,18 +249,36 @@ function MapComponent({
 
       if (!onCoordinateCapture) return;
 
-      const entries = CAPTURE_TARGETS.map((code) => {
-        const [x, y] = transformCoordinate(clicked, projection, code);
-        return {
-          code,
-          label: getProjectionLabel(code),
-          x,
-          y,
-          unit: isGeographic(code) ? ("deg" as const) : ("m" as const),
-        };
-      });
+      const layerName = hitLayer
+        ? ((hitLayer as VectorLayer<VectorSource>).get("layerName") as
+            | string
+            | undefined)
+        : undefined;
 
-      onCoordinateCapture({ viewProjection: projection, entries });
+      const layerCode = hitLayer
+        ? ((hitLayer as VectorLayer<VectorSource>).get(
+            "layerProjectionCode"
+          ) as string | undefined)
+        : undefined;
+
+      const targetCode = layerCode ?? projection;
+      const displayName = layerName ?? "Vista del mapa (sin capa)";
+
+      const [x, y] = transformCoordinate(clicked, projection, targetCode);
+
+      onCoordinateCapture({
+        viewProjection: projection,
+        entries: [
+          {
+            code: targetCode,
+            label: getProjectionLabel(targetCode),
+            layerName: displayName,
+            x,
+            y,
+            unit: isGeographic(targetCode) ? ("deg" as const) : ("m" as const),
+          },
+        ],
+      });
     });
 
     return () => {
