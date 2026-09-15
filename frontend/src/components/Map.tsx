@@ -36,6 +36,9 @@ import {
   getCategoryLabel,
 } from "../projections/eventCategories";
 
+import { supabase } from "../lib/supabaseClient";
+import { eventosToGeoJSON, type EventoRow } from "../projections/eventosSupabase";
+
 import type { CapturedPoint } from "../projections/types";
 
 import type { GeoJSONLayer } from "../projections/layers";
@@ -91,10 +94,16 @@ function MapComponent({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    fetch("/data/deportivos.geojson")
-      .then((response) => response.json())
-      .then((data) => {
-        onLayerProjectionChange(detectLayerProjection(data));
+    // --- Carga inicial de eventos desde Supabase (reemplaza al deportivos.geojson estático) ---
+    supabase
+      .from("eventos")
+      .select("*")
+      .then(({ data, error }) => {
+        if (error || !data) {
+          console.error("Error cargando eventos de Supabase:", error);
+          return;
+        }
+        onLayerProjectionChange(detectLayerProjection(eventosToGeoJSON(data as EventoRow[])));
       });
 
     const deportivosSource = new VectorSource();
@@ -105,7 +114,7 @@ function MapComponent({
     });
 
 
-    deportivosLayer.set("layerName", "Eventos (deportivos.geojson)");
+    deportivosLayer.set("layerName", "Eventos (Supabase)");
     deportivosLayer.set(
       "layerProjectionCode",
       layerTargetProjection ?? "EPSG:4326"
@@ -132,10 +141,17 @@ function MapComponent({
       return vectorLayer;
     });
 
-    fetch("/data/deportivos.geojson")
-      .then((response) => response.json())
-      .then((data) => {
-        const dataToDisplay = reprojectedLayer ?? data;
+    supabase
+      .from("eventos")
+      .select("*")
+      .then(({ data, error }) => {
+        if (error || !data) {
+          console.error("Error cargando eventos de Supabase:", error);
+          return;
+        }
+
+        const geojson = eventosToGeoJSON(data as EventoRow[]);
+        const dataToDisplay = reprojectedLayer ?? geojson;
 
         const sourceProjection =
           reprojectedLayer && layerTargetProjection
@@ -146,6 +162,54 @@ function MapComponent({
 
         deportivosSource.addFeatures(features);
       });
+
+    // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante ---
+    const eventosChannel = supabase
+      .channel("eventos-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "eventos" },
+        (payload) => {
+          const [feature] = reprojectGeoJSON(
+            eventosToGeoJSON([payload.new as EventoRow]),
+            "EPSG:4326",
+            projection
+          );
+          deportivosSource.addFeature(feature);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "eventos" },
+        (payload) => {
+          const updated = payload.new as EventoRow;
+          const existing = deportivosSource
+            .getFeatures()
+            .find((f) => f.get("id") === updated.id);
+
+          if (existing) deportivosSource.removeFeature(existing);
+
+          const [feature] = reprojectGeoJSON(
+            eventosToGeoJSON([updated]),
+            "EPSG:4326",
+            projection
+          );
+          deportivosSource.addFeature(feature);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "eventos" },
+        (payload) => {
+          const deleted = payload.old as { id: string };
+          const existing = deportivosSource
+            .getFeatures()
+            .find((f) => f.get("id") === deleted.id);
+
+          if (existing) deportivosSource.removeFeature(existing);
+        }
+      )
+      .subscribe();
 
     const captureSource = new VectorSource();
 
@@ -294,6 +358,7 @@ function MapComponent({
         };
       }
 
+      supabase.removeChannel(eventosChannel);
       map.setTarget(undefined);
     };
   }, [
@@ -310,3 +375,4 @@ function MapComponent({
 }
 
 export default MapComponent;
+
