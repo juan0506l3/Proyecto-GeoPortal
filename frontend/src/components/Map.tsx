@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
@@ -24,6 +25,8 @@ import { reprojectGeoJSON } from "../projections/reproject";
 import { detectLayerProjection } from "../projections/detectLayerProjection";
 import type { LayerProjectionInfo } from "../projections/detectLayerProjection";
 
+import type { GeoJSONLayer } from "../projections/layers";
+
 import { transformCoordinate } from "../projections/transform";
 import {
   getProjectionLabel,
@@ -44,8 +47,6 @@ import {
 } from "../projections/eventosSupabase";
 
 import type { CapturedPoint } from "../projections/types";
-
-import type { GeoJSONLayer } from "../projections/layers";
 
 interface MapComponentProps {
   projection: string;
@@ -96,7 +97,6 @@ function MapComponent({
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
 
- 
   const viewStateRef = useRef<{
     center: [number, number];
     zoom: number;
@@ -112,7 +112,6 @@ function MapComponent({
       source: deportivosSource,
       style: createCategoryStyle(activeCategories),
     });
-
 
     deportivosLayer.set("layerName", "Eventos (Supabase)");
     deportivosLayer.set(
@@ -135,7 +134,11 @@ function MapComponent({
           ? layerTargetProjection
           : "EPSG:4326";
 
-      const features = reprojectGeoJSON(dataToDisplay, sourceProjection, projection);
+      const features = reprojectGeoJSON(
+        dataToDisplay,
+        sourceProjection,
+        projection
+      );
 
       deportivosSource.clear();
       deportivosSource.addFeatures(features);
@@ -145,16 +148,26 @@ function MapComponent({
     supabase
       .from("eventos")
       .select("*")
-      .then(({ data, error }) => {
-        if (error || !data) {
-          console.error("Error cargando eventos de Supabase:", error);
-          return;
-        }
+      .then(
+        ({
+          data,
+          error,
+        }: {
+          data: EventoRow[] | null;
+          error: unknown;
+        }) => {
+          if (error || !data) {
+            console.error("Error cargando eventos de Supabase:", error);
+            return;
+          }
 
-        allEventos = data as EventoRow[];
-        onLayerProjectionChange(detectLayerProjection(eventosToGeoJSON(allEventos)));
-        syncDeportivosSource();
-      });
+          allEventos = data;
+          onLayerProjectionChange(
+            detectLayerProjection(eventosToGeoJSON(allEventos))
+          );
+          syncDeportivosSource();
+        }
+      );
 
     // Revisión periódica: hace que los eventos dinámicos aparezcan o
     // desaparezcan solos al cruzar su fecha_inicio / fecha_fin.
@@ -177,7 +190,11 @@ function MapComponent({
       vectorLayer.set("layerName", layer.name);
       vectorLayer.set("layerProjectionCode", sourceProjection);
 
-      const features = reprojectGeoJSON(layer.data, sourceProjection, projection);
+      const features = reprojectGeoJSON(
+        layer.data,
+        sourceProjection,
+        projection
+      );
 
       source.addFeatures(features);
 
@@ -190,8 +207,8 @@ function MapComponent({
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "eventos" },
-        (payload) => {
-          const nuevo = payload.new as EventoRow;
+        (payload: { new: EventoRow }) => {
+          const nuevo = payload.new;
           allEventos = [...allEventos, nuevo];
           syncDeportivosSource();
         }
@@ -199,8 +216,8 @@ function MapComponent({
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "eventos" },
-        (payload) => {
-          const actualizado = payload.new as EventoRow;
+        (payload: { new: EventoRow }) => {
+          const actualizado = payload.new;
           allEventos = allEventos.map((row) =>
             row.id === actualizado.id ? actualizado : row
           );
@@ -210,8 +227,8 @@ function MapComponent({
       .on(
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "eventos" },
-        (payload) => {
-          const eliminado = payload.old as { id: string };
+        (payload: { old: { id: string } }) => {
+          const eliminado = payload.old;
           allEventos = allEventos.filter((row) => row.id !== eliminado.id);
           syncDeportivosSource();
         }
@@ -234,10 +251,11 @@ function MapComponent({
     const saved = viewStateRef.current;
     const defaultCenter = isGeographic(projection)
       ? ([-75.58, 6.17] as [number, number])
-      : (transformCoordinate([-75.58, 6.17], "EPSG:4326", projection) as [
-          number,
-          number,
-        ]);
+      : (transformCoordinate(
+          [-75.58, 6.17],
+          "EPSG:4326",
+          projection
+        ) as [number, number]);
 
     const initialCenter = saved
       ? transformCoordinate(saved.center, saved.projection, projection)
@@ -247,7 +265,12 @@ function MapComponent({
 
     const map = new Map({
       target: mapRef.current,
-      layers: [new TileLayer({ source: new OSM() }), deportivosLayer, ...uploadedLayers, captureLayer],
+      layers: [
+        new TileLayer({ source: new OSM() }),
+        deportivosLayer,
+        ...uploadedLayers,
+        captureLayer,
+      ],
       view: new View({
         projection: getProjection(projection) ?? undefined,
         center: initialCenter,
@@ -271,7 +294,6 @@ function MapComponent({
       let hitFeature: FeatureLike | null = null;
       let hitLayer: VectorLayer<VectorSource> | null = null;
 
-      
       map.forEachFeatureAtPixel(
         event.pixel,
         (feature, layer) => {
@@ -284,23 +306,33 @@ function MapComponent({
         }
       );
 
-  
       if (hitFeature) {
-        const properties = (hitFeature as FeatureLike).getProperties() as Record<
-          string,
-          unknown
-        >;
+        const properties = (
+          hitFeature as FeatureLike
+        ).getProperties() as Record<string, unknown>;
+
         const nombre = properties["nombre"] ?? "Sin nombre";
         const municipio = properties["municipio"] ?? "-";
         const tipo = properties["tipo"] ?? "-";
-        const categoria = getCategoryLabel(getFeatureCategory(properties));
+        const categoria = getCategoryLabel(
+          getFeatureCategory(properties)
+        );
 
-        const fechaInicio = properties["fecha_inicio"] as string | null | undefined;
-        const fechaFin = properties["fecha_fin"] as string | null | undefined;
+        const fechaInicio = properties["fecha_inicio"] as
+          | string
+          | null
+          | undefined;
+
+        const fechaFin = properties["fecha_fin"] as
+          | string
+          | null
+          | undefined;
 
         const vigenciaHtml =
           fechaInicio && fechaFin
-            ? `<br />Vigencia: ${new Date(fechaInicio).toLocaleString()} – ${new Date(
+            ? `<br />Vigencia: ${new Date(
+                fechaInicio
+              ).toLocaleString()} – ${new Date(
                 fechaFin
               ).toLocaleString()}`
             : "";
@@ -331,10 +363,12 @@ function MapComponent({
 
       // Coordenada del clic siempre en EPSG:4326, para el formulario de eventos.
       if (onPointSelected) {
-        const lonLat = transformCoordinate(clicked, projection, "EPSG:4326") as [
-          number,
-          number,
-        ];
+        const lonLat = transformCoordinate(
+          clicked,
+          projection,
+          "EPSG:4326"
+        ) as [number, number];
+
         onPointSelected(lonLat);
       }
 
@@ -355,7 +389,11 @@ function MapComponent({
       const targetCode = layerCode ?? projection;
       const displayName = layerName ?? "Vista del mapa (sin capa)";
 
-      const [x, y] = transformCoordinate(clicked, projection, targetCode);
+      const [x, y] = transformCoordinate(
+        clicked,
+        projection,
+        targetCode
+      );
 
       onCoordinateCapture({
         viewProjection: projection,
