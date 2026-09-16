@@ -204,18 +204,18 @@ function MapComponent({
     const eventosChannel = supabase
       .channel("eventos-live")
       .on(
-        "postgres_changes",
+        "postgres_changes" as any,
         { event: "INSERT", schema: "public", table: "eventos" },
-        (payload) => {
+        (payload: any) => {
           const nuevo = payload.new as EventoRow;
           allEventos = [...allEventos, nuevo];
           syncDeportivosSource();
         }
       )
       .on(
-        "postgres_changes",
+        "postgres_changes" as any,
         { event: "UPDATE", schema: "public", table: "eventos" },
-        (payload) => {
+        (payload: any) => {
           const actualizado = payload.new as EventoRow;
           allEventos = allEventos.map((row) =>
             row.id === actualizado.id ? actualizado : row
@@ -224,9 +224,9 @@ function MapComponent({
         }
       )
       .on(
-        "postgres_changes",
+        "postgres_changes" as any,
         { event: "DELETE", schema: "public", table: "eventos" },
-        (payload) => {
+        (payload: any) => {
           const eliminado = payload.old as { id: string };
           allEventos = allEventos.filter((row) => row.id !== eliminado.id);
           syncDeportivosSource();
@@ -441,3 +441,7 @@ function MapComponent({
 }
 
 export default MapComponent;
+
+
+
+
