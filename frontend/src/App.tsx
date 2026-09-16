@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import MapComponent from "./components/Map";
 import Sidebar from "./components/Sidebar";
 import type { LayerProjectionInfo } from "./projections/detectLayerProjection";
@@ -62,9 +62,9 @@ function App() {
     });
   };
 
-  const handlePointSelected = (lonLat: [number, number]) => {
+  const handlePointSelected = useCallback((lonLat: [number, number]) => {
     setSelectedPoint({ lng: lonLat[0], lat: lonLat[1] });
-  };
+  }, []);
 
   const handleReproject = async () => {
     if (!layerProjection) {
