@@ -184,7 +184,7 @@ function MapComponent({
       return vectorLayer;
     });
 
-    // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante ---
+    // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante 
     const eventosChannel = supabase
       .channel("eventos-live")
       .on(
