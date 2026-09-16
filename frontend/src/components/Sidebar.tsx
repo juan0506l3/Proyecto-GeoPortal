@@ -1,4 +1,5 @@
 import CoordinateCapture from "./CoordinateCapture";
+import EventForm from "./EventForm";
 import GeoJSONUploader from "./GeoJSONUploader";
 import EventFilter from "./EventFilter";
 import LayerList from "./LayerList";
@@ -12,6 +13,9 @@ import "./Sidebar.css";
 
 interface SidebarProps {
   capturedPoint: CapturedPoint | null;
+
+  // Coordenada del clic en el mapa en EPSG:4326, para el formulario de eventos.
+  selectedPoint: { lng: number; lat: number } | null;
 
   onFileLoaded: (data: unknown, fileName: string) => void;
 
@@ -35,6 +39,7 @@ interface SidebarProps {
 
 function Sidebar({
   capturedPoint,
+  selectedPoint,
   onFileLoaded,
   activeCategories,
   onToggleCategory,
@@ -53,6 +58,8 @@ function Sidebar({
     <aside className="sidebar">
       <div className="sidebar__scroll">
         <CoordinateCapture point={capturedPoint} />
+
+        <EventForm coordinates={selectedPoint} />
 
         <GeoJSONUploader onFileLoaded={onFileLoaded} />
 

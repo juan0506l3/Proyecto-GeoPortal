@@ -26,6 +26,11 @@ function App() {
   const [capturedPoint, setCapturedPoint] =
     useState<CapturedPoint | null>(null);
 
+  // Coordenada del clic en el mapa, siempre en EPSG:4326, para el
+  // formulario de creación de eventos.
+  const [selectedPoint, setSelectedPoint] =
+    useState<{ lng: number; lat: number } | null>(null);
+
   // SRE al que fue reproyectada la capa
   const [layerTargetProjection, setLayerTargetProjection] =
     useState<string | null>(null);
@@ -55,6 +60,10 @@ function App() {
 
       return next;
     });
+  };
+
+  const handlePointSelected = (lonLat: [number, number]) => {
+    setSelectedPoint({ lng: lonLat[0], lat: lonLat[1] });
   };
 
   const handleReproject = async () => {
@@ -178,10 +187,14 @@ function App() {
           onCoordinateCapture={
             setCapturedPoint
           }
+          onPointSelected={
+            handlePointSelected
+          }
         />
 
         <Sidebar
           capturedPoint={capturedPoint}
+          selectedPoint={selectedPoint}
           onFileLoaded={handleGeoJSONLoaded}
           activeCategories={activeCategories}
           onToggleCategory={handleToggleCategory}

@@ -37,7 +37,11 @@ import {
 } from "../projections/eventCategories";
 
 import { supabase } from "../lib/supabaseClient";
-import { eventosToGeoJSON, type EventoRow } from "../projections/eventosSupabase";
+import {
+  eventosToGeoJSON,
+  filtrarEventosVigentes,
+  type EventoRow,
+} from "../projections/eventosSupabase";
 
 import type { CapturedPoint } from "../projections/types";
 
@@ -51,7 +55,14 @@ interface MapComponentProps {
   activeCategories: Set<string>;
   onLayerProjectionChange: (info: LayerProjectionInfo) => void;
   onCoordinateCapture?: (point: CapturedPoint) => void;
+  // Coordenada del clic en el mapa, siempre en EPSG:4326 (lon, lat).
+  // Se usa para prellenar el formulario de creación de eventos.
+  onPointSelected?: (lonLat: [number, number]) => void;
 }
+
+// Cada cuánto se vuelve a evaluar qué eventos dinámicos siguen vigentes
+// (por si el reloj cruza fecha_inicio/fecha_fin sin que haya cambios en la BD).
+const INTERVALO_REVISION_VIGENCIA_MS = 60000;
 
 function createCategoryStyle(activeCategories: Set<string>) {
   return (feature: FeatureLike) => {
@@ -81,6 +92,7 @@ function MapComponent({
   activeCategories,
   onLayerProjectionChange,
   onCoordinateCapture,
+  onPointSelected,
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
 
@@ -94,18 +106,6 @@ function MapComponent({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // --- Carga inicial de eventos desde Supabase (reemplaza al deportivos.geojson estático) ---
-    supabase
-      .from("eventos")
-      .select("*")
-      .then(({ data, error }) => {
-        if (error || !data) {
-          console.error("Error cargando eventos de Supabase:", error);
-          return;
-        }
-        onLayerProjectionChange(detectLayerProjection(eventosToGeoJSON(data as EventoRow[])));
-      });
-
     const deportivosSource = new VectorSource();
 
     const deportivosLayer = new VectorLayer({
@@ -118,6 +118,49 @@ function MapComponent({
     deportivosLayer.set(
       "layerProjectionCode",
       layerTargetProjection ?? "EPSG:4326"
+    );
+
+    // Guarda TODOS los eventos traídos de Supabase (estáticos + dinámicos).
+    // A partir de esta lista se recalcula, en cada sync, cuáles están
+    // vigentes ahora mismo según fecha_inicio/fecha_fin.
+    let allEventos: EventoRow[] = [];
+
+    const syncDeportivosSource = () => {
+      const vigentes = filtrarEventosVigentes(allEventos);
+      const geojson = eventosToGeoJSON(vigentes);
+      const dataToDisplay = reprojectedLayer ?? geojson;
+
+      const sourceProjection =
+        reprojectedLayer && layerTargetProjection
+          ? layerTargetProjection
+          : "EPSG:4326";
+
+      const features = reprojectGeoJSON(dataToDisplay, sourceProjection, projection);
+
+      deportivosSource.clear();
+      deportivosSource.addFeatures(features);
+    };
+
+    // --- Carga inicial de eventos desde Supabase (reemplaza al deportivos.geojson estático) ---
+    supabase
+      .from("eventos")
+      .select("*")
+      .then(({ data, error }) => {
+        if (error || !data) {
+          console.error("Error cargando eventos de Supabase:", error);
+          return;
+        }
+
+        allEventos = data as EventoRow[];
+        onLayerProjectionChange(detectLayerProjection(eventosToGeoJSON(allEventos)));
+        syncDeportivosSource();
+      });
+
+    // Revisión periódica: hace que los eventos dinámicos aparezcan o
+    // desaparezcan solos al cruzar su fecha_inicio / fecha_fin.
+    const vigenciaIntervalId = window.setInterval(
+      syncDeportivosSource,
+      INTERVALO_REVISION_VIGENCIA_MS
     );
 
     const uploadedLayers = layers.map((layer) => {
@@ -141,28 +184,6 @@ function MapComponent({
       return vectorLayer;
     });
 
-    supabase
-      .from("eventos")
-      .select("*")
-      .then(({ data, error }) => {
-        if (error || !data) {
-          console.error("Error cargando eventos de Supabase:", error);
-          return;
-        }
-
-        const geojson = eventosToGeoJSON(data as EventoRow[]);
-        const dataToDisplay = reprojectedLayer ?? geojson;
-
-        const sourceProjection =
-          reprojectedLayer && layerTargetProjection
-            ? layerTargetProjection
-            : "EPSG:4326";
-
-        const features = reprojectGeoJSON(dataToDisplay, sourceProjection, projection);
-
-        deportivosSource.addFeatures(features);
-      });
-
     // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante ---
     const eventosChannel = supabase
       .channel("eventos-live")
@@ -170,43 +191,29 @@ function MapComponent({
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "eventos" },
         (payload) => {
-          const [feature] = reprojectGeoJSON(
-            eventosToGeoJSON([payload.new as EventoRow]),
-            "EPSG:4326",
-            projection
-          );
-          deportivosSource.addFeature(feature);
+          const nuevo = payload.new as EventoRow;
+          allEventos = [...allEventos, nuevo];
+          syncDeportivosSource();
         }
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "eventos" },
         (payload) => {
-          const updated = payload.new as EventoRow;
-          const existing = deportivosSource
-            .getFeatures()
-            .find((f) => f.get("id") === updated.id);
-
-          if (existing) deportivosSource.removeFeature(existing);
-
-          const [feature] = reprojectGeoJSON(
-            eventosToGeoJSON([updated]),
-            "EPSG:4326",
-            projection
+          const actualizado = payload.new as EventoRow;
+          allEventos = allEventos.map((row) =>
+            row.id === actualizado.id ? actualizado : row
           );
-          deportivosSource.addFeature(feature);
+          syncDeportivosSource();
         }
       )
       .on(
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "eventos" },
         (payload) => {
-          const deleted = payload.old as { id: string };
-          const existing = deportivosSource
-            .getFeatures()
-            .find((f) => f.get("id") === deleted.id);
-
-          if (existing) deportivosSource.removeFeature(existing);
+          const eliminado = payload.old as { id: string };
+          allEventos = allEventos.filter((row) => row.id !== eliminado.id);
+          syncDeportivosSource();
         }
       )
       .subscribe();
@@ -288,6 +295,16 @@ function MapComponent({
         const tipo = properties["tipo"] ?? "-";
         const categoria = getCategoryLabel(getFeatureCategory(properties));
 
+        const fechaInicio = properties["fecha_inicio"] as string | null | undefined;
+        const fechaFin = properties["fecha_fin"] as string | null | undefined;
+
+        const vigenciaHtml =
+          fechaInicio && fechaFin
+            ? `<br />Vigencia: ${new Date(fechaInicio).toLocaleString()} – ${new Date(
+                fechaFin
+              ).toLocaleString()}`
+            : "";
+
         popupElement.innerHTML = `
           <strong>${nombre}</strong>
           <br />
@@ -296,6 +313,7 @@ function MapComponent({
           Tipo: ${tipo}
           <br />
           Categoría: ${categoria}
+          ${vigenciaHtml}
         `;
 
         popupElement.style.display = "block";
@@ -310,6 +328,15 @@ function MapComponent({
 
       captureSource.clear();
       captureSource.addFeature(new Feature(new Point(clicked)));
+
+      // Coordenada del clic siempre en EPSG:4326, para el formulario de eventos.
+      if (onPointSelected) {
+        const lonLat = transformCoordinate(clicked, projection, "EPSG:4326") as [
+          number,
+          number,
+        ];
+        onPointSelected(lonLat);
+      }
 
       if (!onCoordinateCapture) return;
 
@@ -358,6 +385,7 @@ function MapComponent({
         };
       }
 
+      window.clearInterval(vigenciaIntervalId);
       supabase.removeChannel(eventosChannel);
       map.setTarget(undefined);
     };
@@ -369,10 +397,10 @@ function MapComponent({
     activeCategories,
     onLayerProjectionChange,
     onCoordinateCapture,
+    onPointSelected,
   ]);
 
   return <div ref={mapRef} className="map-container" />;
 }
 
 export default MapComponent;
-
