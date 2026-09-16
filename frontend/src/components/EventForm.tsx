@@ -14,7 +14,7 @@ interface EventFormProps {
 type Mensaje = { tipo: "ok" | "error"; texto: string };
 
 function EventForm({ coordinates, onEventCreated }: EventFormProps) {
-  const [abierto, setAbierto] = useState(false);
+  const [abierto, setAbierto] = useState(true);
 
   const [nombre, setNombre] = useState("");
   const [municipio, setMunicipio] = useState("");
@@ -86,7 +86,10 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
       fechaInicioIso = new Date(fechaInicio).toISOString();
       fechaFinIso = new Date(fechaFin).toISOString();
 
-      if (new Date(fechaFinIso).getTime() < new Date(fechaInicioIso).getTime()) {
+      if (
+        new Date(fechaFinIso).getTime() <
+        new Date(fechaInicioIso).getTime()
+      ) {
         setMensaje({
           tipo: "error",
           texto: "La fecha de fin no puede ser anterior a la fecha de inicio.",
@@ -125,14 +128,7 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
   };
 
   return (
-    <section
-      className="event-form"
-      style={{
-        display: "block",
-        background: "red",
-        minHeight: "60px",
-      }}
-    >
+    <section className="event-form">
       <button
         type="button"
         className="event-form__toggle"
@@ -140,6 +136,7 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
         aria-expanded={abierto}
       >
         <span>Crear nuevo evento</span>
+
         <span
           className={`event-form__chevron ${
             abierto ? "event-form__chevron--open" : ""
@@ -278,12 +275,18 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
           )}
 
           {mensaje && (
-            <p className={`event-form__mensaje event-form__mensaje--${mensaje.tipo}`}>
+            <p
+              className={`event-form__mensaje event-form__mensaje--${mensaje.tipo}`}
+            >
               {mensaje.texto}
             </p>
           )}
 
-          <button type="submit" className="event-form__submit" disabled={enviando}>
+          <button
+            type="submit"
+            className="event-form__submit"
+            disabled={enviando}
+          >
             {enviando ? "Guardando..." : "Guardar evento"}
           </button>
         </form>
