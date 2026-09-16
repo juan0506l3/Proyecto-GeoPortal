@@ -125,7 +125,14 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
   };
 
   return (
-    <section className="event-form">
+    <section
+      className="event-form"
+      style={{
+        display: "block",
+        background: "red",
+        minHeight: "60px",
+      }}
+    >
       <button
         type="button"
         className="event-form__toggle"

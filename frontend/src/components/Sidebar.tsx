@@ -59,9 +59,7 @@ function Sidebar({
       <div className="sidebar__scroll">
         <CoordinateCapture point={capturedPoint} />
 
-        <div style={{ background: "red", padding: "20px", color: "white" }}>
-          PRUEBA FORMULARIO
-        </div>
+        <EventForm coordinates={selectedPoint} />
 
         <GeoJSONUploader onFileLoaded={onFileLoaded} />
 
