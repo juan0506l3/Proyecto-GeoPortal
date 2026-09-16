@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
@@ -207,8 +206,8 @@ function MapComponent({
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "eventos" },
-        (payload: { new: EventoRow }) => {
-          const nuevo = payload.new;
+        (payload) => {
+          const nuevo = payload.new as EventoRow;
           allEventos = [...allEventos, nuevo];
           syncDeportivosSource();
         }
@@ -216,8 +215,8 @@ function MapComponent({
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "eventos" },
-        (payload: { new: EventoRow }) => {
-          const actualizado = payload.new;
+        (payload) => {
+          const actualizado = payload.new as EventoRow;
           allEventos = allEventos.map((row) =>
             row.id === actualizado.id ? actualizado : row
           );
@@ -227,8 +226,8 @@ function MapComponent({
       .on(
         "postgres_changes",
         { event: "DELETE", schema: "public", table: "eventos" },
-        (payload: { old: { id: string } }) => {
-          const eliminado = payload.old;
+        (payload) => {
+          const eliminado = payload.old as { id: string };
           allEventos = allEventos.filter((row) => row.id !== eliminado.id);
           syncDeportivosSource();
         }
