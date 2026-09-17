@@ -12,9 +12,9 @@
     --gp-surface-alt: #eef2f6;
     --gp-border: #d7e1ea;
   
-    width: 420px;
-    min-width: 370px;
-    max-width: 420px;
+    width: 450px;
+    min-width: 390px;
+    max-width: 450px;
     height: 100%;
     background: var(--gp-surface-alt);
     border-left: 1px solid var(--gp-border);
