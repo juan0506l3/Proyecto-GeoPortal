@@ -152,28 +152,32 @@
 .event-form__flyer {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
-.event-form__flyer-label {
+.event-form__flyer-title {
   font-size: 12px;
   font-weight: 700;
-  color: var(--gp-muted);
+  color: var(--gp-ink);
 }
 
-.event-form__flyer-dropzone {
+/* Caja de arrastrar y soltar */
+
+.event-form__dropzone {
   width: 100%;
-  min-height: 150px;
+  min-height: 175px;
   box-sizing: border-box;
 
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 
-  padding: 20px;
+  gap: 8px;
+  padding: 24px 18px;
 
-  border: 2px dashed #aebdca;
-  border-radius: 10px;
+  border: 2px dashed #b7c5d2;
+  border-radius: 12px;
 
   background: #f8fafc;
 
@@ -183,49 +187,67 @@
   transition:
     border-color 0.2s ease,
     background 0.2s ease,
+    box-shadow 0.2s ease,
     transform 0.2s ease;
 }
 
-.event-form__flyer-dropzone:hover {
+.event-form__dropzone:hover {
   border-color: var(--gp-primary);
   background: var(--gp-primary-soft);
+  box-shadow: 0 2px 8px rgba(32, 82, 149, 0.08);
 }
 
-.event-form__flyer-dropzone--dragging {
+.event-form__dropzone--dragging {
   border-color: var(--gp-primary);
   background: var(--gp-primary-soft);
+  box-shadow: 0 0 0 3px rgba(32, 82, 149, 0.12);
   transform: scale(1.01);
 }
 
-.event-form__flyer-content {
+/* Icono */
+
+.event-form__dropzone-icon {
+  width: 52px;
+  height: 52px;
+
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
 
-  gap: 7px;
+  border-radius: 50%;
 
-  pointer-events: none;
-}
+  background: var(--gp-primary-soft);
+  color: var(--gp-primary);
 
-.event-form__flyer-icon {
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1;
-  opacity: 0.75;
 }
 
-.event-form__flyer-title {
+/* Texto principal */
+
+.event-form__dropzone-main {
   font-size: 13px;
   font-weight: 700;
   color: var(--gp-ink);
 }
 
-.event-form__flyer-hint {
+/* Texto secundario */
+
+.event-form__dropzone-secondary {
   font-size: 11px;
   color: var(--gp-muted);
 }
 
-/* Vista previa después de seleccionar el flyer */
+/* Formatos aceptados */
+
+.event-form__dropzone-format {
+  margin-top: 2px;
+
+  font-size: 10px;
+  color: #8a98a8;
+}
+
+/* Vista previa */
 
 .event-form__flyer-preview {
   position: relative;
@@ -241,44 +263,60 @@
   object-fit: contain;
 
   border: 1px solid var(--gp-border);
-  border-radius: 8px;
+  border-radius: 10px;
 
   background: var(--gp-surface-alt);
 }
 
-/* Botón para quitar el flyer */
+/* Información del archivo */
 
-.event-form__flyer-remove {
-  position: absolute;
-
-  top: 8px;
-  right: 8px;
-
-  width: 30px;
-  height: 30px;
-
+.event-form__flyer-info {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
 
-  padding: 0;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.event-form__flyer-name {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  font-size: 11px;
+  color: var(--gp-muted);
+}
+
+/* Botón quitar */
+
+.event-form__flyer-remove {
+  flex-shrink: 0;
+
+  padding: 6px 10px;
 
   border: none;
-  border-radius: 50%;
+  border-radius: 6px;
 
-  background: rgba(0, 0, 0, 0.7);
-  color: #ffffff;
+  background: var(--gp-danger-soft);
+  color: var(--gp-danger);
 
-  font-size: 16px;
-  line-height: 1;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
 
   cursor: pointer;
 
-  transition: background 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .event-form__flyer-remove:hover {
   background: var(--gp-danger);
+  color: #ffffff;
 }
 
 .event-form__submit {
