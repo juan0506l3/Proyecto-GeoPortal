@@ -130,17 +130,35 @@ function MapComponent({
     const syncDeportivosSource = () => {
       const vigentes = filtrarEventosVigentes(allEventos);
 
-      // Los eventos siempre parten de su GeoJSON original en EPSG:4326.
+      // Los eventos se almacenan originalmente en EPSG:4326.
       // Esto conserva todas sus propiedades, incluido flyer_path.
       const geojson = eventosToGeoJSON(vigentes);
 
-      // Reproyectamos directamente los eventos actuales a la proyección
-      // que utiliza actualmente el visor.
-      const features = reprojectGeoJSON(
+      // SRE al que se quiere reproyectar la capa.
+      // Si todavía no se ha seleccionado uno, usamos el SRE del visor.
+      const destino = layerTargetProjection ?? projection;
+
+      // Primero reproyectamos desde EPSG:4326 al SRE
+      // seleccionado como destino de la capa.
+      const geojsonReprojectado = reprojectGeoJSON(
         geojson,
         "EPSG:4326",
-        projection
+        destino
       );
+
+      // OpenLayers necesita que las geometrías estén finalmente
+      // en la proyección utilizada por el View para poder dibujarlas.
+      //
+      // Si el SRE destino es diferente al del visor, hacemos una
+      // segunda transformación exclusivamente para la representación.
+      const features =
+        destino === projection
+          ? geojsonReprojectado
+          : reprojectGeoJSON(
+              geojsonReprojectado,
+              destino,
+              projection
+            );
 
       deportivosSource.clear();
       deportivosSource.addFeatures(features);
@@ -148,7 +166,6 @@ function MapComponent({
 
     // Evitamos que TypeScript marque estas props como no utilizadas.
     // La reproyección de eventos ya no depende de una copia anterior.
-    void layerTargetProjection;
     void reprojectedLayer;
 
     // --- Carga inicial de eventos desde Supabase ---
