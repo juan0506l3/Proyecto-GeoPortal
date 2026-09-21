@@ -19,7 +19,10 @@ import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import type { FeatureLike } from "ol/Feature";
 
-import { reprojectGeoJSON } from "../projections/reproject";
+import {
+  reprojectGeoJSON,
+  reprojectGeoJSONData,
+} from "../projections/reproject";
 
 import { detectLayerProjection } from "../projections/detectLayerProjection";
 import type { LayerProjectionInfo } from "../projections/detectLayerProjection";
@@ -138,22 +141,34 @@ function MapComponent({
       // Si todavía no se ha seleccionado uno, usamos el SRE del visor.
       const destino = layerTargetProjection ?? projection;
 
-      // Primero reproyectamos desde EPSG:4326 al SRE
-      // seleccionado como destino de la capa.
-      const geojsonReprojectado = reprojectGeoJSON(
-        geojson,
-        "EPSG:4326",
-        destino
-      );
-
-      // OpenLayers necesita que las geometrías estén finalmente
-      // en la proyección utilizada por el View para poder dibujarlas.
+      // Primero generamos un NUEVO GeoJSON reproyectado desde
+      // EPSG:4326 hasta el SRE destino.
       //
-      // Si el SRE destino es diferente al del visor, hacemos una
-      // segunda transformación exclusivamente para la representación.
+      // Usamos reprojectGeoJSONData porque necesitamos conservar
+      // el GeoJSON y todas sus propiedades para poder hacer
+      // posteriormente la transformación hacia el visor.
+      const geojsonReprojectado =
+        reprojectGeoJSONData(
+          geojson,
+          "EPSG:4326",
+          destino
+        );
+
+      // OpenLayers necesita que las geometrías utilizadas por
+      // VectorSource estén finalmente en la proyección del View.
+      //
+      // Si el SRE destino ya coincide con el visor, no necesitamos
+      // una segunda transformación.
+      //
+      // Si son diferentes, transformamos el GeoJSON desde el
+      // SRE destino hasta el SRE utilizado por el mapa.
       const features =
         destino === projection
-          ? geojsonReprojectado
+          ? reprojectGeoJSON(
+              geojsonReprojectado,
+              destino,
+              projection
+            )
           : reprojectGeoJSON(
               geojsonReprojectado,
               destino,
@@ -162,11 +177,13 @@ function MapComponent({
 
       deportivosSource.clear();
       deportivosSource.addFeatures(features);
-    };
 
-    // Evitamos que TypeScript marque estas props como no utilizadas.
-    // La reproyección de eventos ya no depende de una copia anterior.
-    void reprojectedLayer;
+      // La capa ahora representa el SRE destino seleccionado.
+      deportivosLayer.set(
+        "layerProjectionCode",
+        destino
+      );
+    };
 
     // --- Carga inicial de eventos desde Supabase ---
     supabase
