@@ -113,9 +113,13 @@ function MapComponent({
     });
 
     deportivosLayer.set("layerName", "Eventos (Supabase)");
+
+    // Los eventos se almacenan en EPSG:4326.
+    // Esta propiedad se mantiene para la información del SRE
+    // de la capa de eventos.
     deportivosLayer.set(
       "layerProjectionCode",
-      layerTargetProjection ?? "EPSG:4326"
+      "EPSG:4326"
     );
 
     // Guarda TODOS los eventos traídos de Supabase (estáticos + dinámicos).
@@ -125,17 +129,16 @@ function MapComponent({
 
     const syncDeportivosSource = () => {
       const vigentes = filtrarEventosVigentes(allEventos);
+
+      // Los eventos siempre parten de su GeoJSON original en EPSG:4326.
+      // Esto conserva todas sus propiedades, incluido flyer_path.
       const geojson = eventosToGeoJSON(vigentes);
-      const dataToDisplay = reprojectedLayer ?? geojson;
 
-      const sourceProjection =
-        reprojectedLayer && layerTargetProjection
-          ? layerTargetProjection
-          : "EPSG:4326";
-
+      // Reproyectamos directamente los eventos actuales a la proyección
+      // que utiliza actualmente el visor.
       const features = reprojectGeoJSON(
-        dataToDisplay,
-        sourceProjection,
+        geojson,
+        "EPSG:4326",
         projection
       );
 
@@ -143,7 +146,12 @@ function MapComponent({
       deportivosSource.addFeatures(features);
     };
 
-    // --- Carga inicial de eventos desde Supabase (reemplaza al deportivos.geojson estático) ---
+    // Evitamos que TypeScript marque estas props como no utilizadas.
+    // La reproyección de eventos ya no depende de una copia anterior.
+    void layerTargetProjection;
+    void reprojectedLayer;
+
+    // --- Carga inicial de eventos desde Supabase ---
     supabase
       .from("eventos")
       .select("*")
@@ -161,9 +169,11 @@ function MapComponent({
           }
 
           allEventos = data;
+
           onLayerProjectionChange(
             detectLayerProjection(eventosToGeoJSON(allEventos))
           );
+
           syncDeportivosSource();
         }
       );
@@ -217,9 +227,11 @@ function MapComponent({
         { event: "UPDATE", schema: "public", table: "eventos" },
         (payload: any) => {
           const actualizado = payload.new as EventoRow;
+
           allEventos = allEventos.map((row) =>
             row.id === actualizado.id ? actualizado : row
           );
+
           syncDeportivosSource();
         }
       )
@@ -228,7 +240,11 @@ function MapComponent({
         { event: "DELETE", schema: "public", table: "eventos" },
         (payload: any) => {
           const eliminado = payload.old as { id: string };
-          allEventos = allEventos.filter((row) => row.id !== eliminado.id);
+
+          allEventos = allEventos.filter(
+            (row) => row.id !== eliminado.id
+          );
+
           syncDeportivosSource();
         }
       )
@@ -248,6 +264,7 @@ function MapComponent({
     });
 
     const saved = viewStateRef.current;
+
     const defaultCenter = isGeographic(projection)
       ? ([-75.58, 6.17] as [number, number])
       : (transformCoordinate(
@@ -257,7 +274,11 @@ function MapComponent({
         ) as [number, number]);
 
     const initialCenter = saved
-      ? transformCoordinate(saved.center, saved.projection, projection)
+      ? transformCoordinate(
+          saved.center,
+          saved.projection,
+          projection
+        )
       : defaultCenter;
 
     const initialZoom = saved ? saved.zoom : 12;
@@ -313,6 +334,7 @@ function MapComponent({
         const nombre = properties["nombre"] ?? "Sin nombre";
         const municipio = properties["municipio"] ?? "-";
         const tipo = properties["tipo"] ?? "-";
+
         const categoria = getCategoryLabel(
           getFeatureCategory(properties)
         );
@@ -416,7 +438,9 @@ function MapComponent({
       const clicked = event.coordinate as [number, number];
 
       captureSource.clear();
-      captureSource.addFeature(new Feature(new Point(clicked)));
+      captureSource.addFeature(
+        new Feature(new Point(clicked))
+      );
 
       // Coordenada del clic siempre en EPSG:4326, para el formulario de eventos.
       if (onPointSelected) {
@@ -432,9 +456,9 @@ function MapComponent({
       if (!onCoordinateCapture) return;
 
       const layerName = hitLayer
-        ? ((hitLayer as VectorLayer<VectorSource>).get("layerName") as
-            | string
-            | undefined)
+        ? ((hitLayer as VectorLayer<VectorSource>).get(
+            "layerName"
+          ) as string | undefined)
         : undefined;
 
       const layerCode = hitLayer
@@ -444,7 +468,8 @@ function MapComponent({
         : undefined;
 
       const targetCode = layerCode ?? projection;
-      const displayName = layerName ?? "Vista del mapa (sin capa)";
+      const displayName =
+        layerName ?? "Vista del mapa (sin capa)";
 
       const [x, y] = transformCoordinate(
         clicked,
@@ -461,7 +486,9 @@ function MapComponent({
             layerName: displayName,
             x,
             y,
-            unit: isGeographic(targetCode) ? ("deg" as const) : ("m" as const),
+            unit: isGeographic(targetCode)
+              ? ("deg" as const)
+              : ("m" as const),
           },
         ],
       });

@@ -4,7 +4,6 @@ import Sidebar from "./components/Sidebar";
 import AdminLogin from "./components/AdminLogin";
 import type { LayerProjectionInfo } from "./projections/detectLayerProjection";
 import type { CapturedPoint } from "./projections/types";
-import { reprojectGeoJSONData } from "./projections/reproject";
 import type { GeoJSONLayer } from "./projections/layers";
 import { detectLayerProjection } from "./projections/detectLayerProjection";
 import { EVENT_CATEGORIES } from "./projections/eventCategories";
@@ -126,22 +125,12 @@ function App() {
     }
 
     try {
-      const response = await fetch(
-        "/data/deportivos.geojson"
-      );
-
-      const data = await response.json();
-
-      const result = reprojectGeoJSONData(
-        data,
-        layerProjection.code,
-        targetProjection
-      );
-
-      setReprojectedLayer(result);
-      setLayerTargetProjection(
-        targetProjection
-      );
+      // Los eventos ya no se obtienen desde deportivos.geojson.
+      // Su fuente actual es Supabase y Map.tsx se encarga de
+      // reproyectarlos manteniendo su información completa,
+      // incluido flyer_path.
+      setReprojectedLayer(null);
+      setLayerTargetProjection(targetProjection);
     } catch (error) {
       console.error(
         "Error al reproyectar la capa:",
