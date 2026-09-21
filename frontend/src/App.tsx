@@ -1,12 +1,14 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import MapComponent from "./components/Map";
 import Sidebar from "./components/Sidebar";
+import AdminLogin from "./components/AdminLogin";
 import type { LayerProjectionInfo } from "./projections/detectLayerProjection";
 import type { CapturedPoint } from "./projections/types";
 import { reprojectGeoJSONData } from "./projections/reproject";
 import type { GeoJSONLayer } from "./projections/layers";
 import { detectLayerProjection } from "./projections/detectLayerProjection";
 import { EVENT_CATEGORIES } from "./projections/eventCategories";
+import { supabase } from "./lib/supabaseClient";
 import "./App.css";
 
 function App() {
@@ -47,6 +49,55 @@ function App() {
   const [activeCategories, setActiveCategories] = useState<Set<string>>(
     () => new Set(EVENT_CATEGORIES.map((category) => category.id))
   );
+
+  // Estado de autenticación del administrador
+  const [esAdmin, setEsAdmin] = useState(false);
+
+  // Controla la ventana de inicio de sesión
+  const [mostrarLogin, setMostrarLogin] = useState(false);
+
+  const comprobarAdministrador = useCallback(async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      setEsAdmin(false);
+      return;
+    }
+
+    const { data, error } = await supabase.rpc("es_admin");
+
+    if (error || !data) {
+      setEsAdmin(false);
+      return;
+    }
+
+    setEsAdmin(true);
+  }, []);
+
+  useEffect(() => {
+    comprobarAdministrador();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      comprobarAdministrador();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [comprobarAdministrador]);
+
+  const handleLogin = () => {
+    setEsAdmin(true);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setEsAdmin(false);
+  };
 
   const handleToggleCategory = (categoryId: string) => {
     setActiveCategories((previous) => {
@@ -168,6 +219,26 @@ function App() {
     <div className="app-layout">
       <header className="app-layout__header">
         <h1>GeoPortal</h1>
+
+        <div className="app-layout__auth">
+          {esAdmin ? (
+            <button
+              type="button"
+              className="app-layout__auth-button"
+              onClick={handleLogout}
+            >
+              Cerrar sesión
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="app-layout__auth-button"
+              onClick={() => setMostrarLogin(true)}
+            >
+              🔐 Iniciar sesión
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="app-layout__body">
@@ -195,6 +266,7 @@ function App() {
         <Sidebar
           capturedPoint={capturedPoint}
           selectedPoint={selectedPoint}
+          isAdmin={esAdmin}
           onFileLoaded={handleGeoJSONLoaded}
           activeCategories={activeCategories}
           onToggleCategory={handleToggleCategory}
@@ -210,6 +282,13 @@ function App() {
           onReproject={handleReproject}
         />
       </div>
+
+      {mostrarLogin && (
+        <AdminLogin
+          onLogin={handleLogin}
+          onClose={() => setMostrarLogin(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,25 +1,65 @@
 .app-layout {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    width: 100%;
-  }
-  
-  .app-layout__header {
-    flex-shrink: 0;
-    padding: 10px 20px;
-    background: #ffffff;
-    border-bottom: 1px solid #e0e0e0;
-  }
-  
-  .app-layout__header h1 {
-    margin: 0;
-    font-size: 18px;
-  }
-  
-  .app-layout__body {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: row;
-  }
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+}
+
+.app-layout__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.app-layout__header h1 {
+  margin: 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.app-layout__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+.app-layout__header {
+  position: relative;
+}
+
+.app-layout__auth {
+  margin-left: auto;
+}
+
+.app-layout__auth-button {
+  padding: 8px 13px;
+
+  border: 1px solid #d5dce5;
+  border-radius: 7px;
+
+  background: #ffffff;
+  color: #205295;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.app-layout__auth-button:hover {
+  background: #f1f6fc;
+  border-color: #205295;
+  color: #163d70;
+}
+

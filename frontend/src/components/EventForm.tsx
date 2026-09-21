@@ -175,7 +175,7 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
 
     setEnviando(true);
 
-    const { error } = await crearEvento(nuevoEvento);
+    const { error } = await crearEvento(nuevoEvento, flyer);
 
     setEnviando(false);
 
