@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { DragEvent, FormEvent, ChangeEvent } from "react";
 import { EVENT_CATEGORIES } from "../projections/eventCategories";
 import { crearEvento } from "../projections/eventosSupabase";
 import type { NuevoEvento } from "../projections/eventosSupabase";
@@ -27,8 +27,14 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
 
+  const [flyer, setFlyer] = useState<File | null>(null);
+  const [flyerPreview, setFlyerPreview] = useState<string | null>(null);
+  const [arrastrandoFlyer, setArrastrandoFlyer] = useState(false);
+
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
+
+  const flyerInputRef = useRef<HTMLInputElement | null>(null);
 
   // Cada vez que capturan un punto nuevo en el mapa, se autocompletan
   // los campos de longitud/latitud (el usuario aún puede editarlos a mano).
@@ -39,6 +45,63 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
     }
   }, [coordinates]);
 
+  // Libera la URL temporal utilizada para la vista previa del flyer.
+  useEffect(() => {
+    return () => {
+      if (flyerPreview) {
+        URL.revokeObjectURL(flyerPreview);
+      }
+    };
+  }, [flyerPreview]);
+
+  const seleccionarFlyer = (archivo: File | null) => {
+    if (!archivo) return;
+
+    if (!archivo.type.startsWith("image/")) {
+      setMensaje({
+        tipo: "error",
+        texto: "El flyer debe ser una imagen.",
+      });
+      return;
+    }
+
+    if (flyerPreview) {
+      URL.revokeObjectURL(flyerPreview);
+    }
+
+    const previewUrl = URL.createObjectURL(archivo);
+
+    setFlyer(archivo);
+    setFlyerPreview(previewUrl);
+    setMensaje(null);
+  };
+
+  const handleFlyerChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const archivo = event.target.files?.[0] ?? null;
+    seleccionarFlyer(archivo);
+  };
+
+  const handleFlyerDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setArrastrandoFlyer(false);
+
+    const archivo = event.dataTransfer.files?.[0] ?? null;
+    seleccionarFlyer(archivo);
+  };
+
+  const eliminarFlyer = () => {
+    if (flyerPreview) {
+      URL.revokeObjectURL(flyerPreview);
+    }
+
+    setFlyer(null);
+    setFlyerPreview(null);
+
+    if (flyerInputRef.current) {
+      flyerInputRef.current.value = "";
+    }
+  };
+
   const resetFormulario = () => {
     setNombre("");
     setMunicipio("");
@@ -46,6 +109,7 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
     setEsDinamico(false);
     setFechaInicio("");
     setFechaFin("");
+    eliminarFlyer();
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -110,7 +174,9 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
     };
 
     setEnviando(true);
+
     const { error } = await crearEvento(nuevoEvento);
+
     setEnviando(false);
 
     if (error) {
@@ -122,7 +188,11 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
       return;
     }
 
-    setMensaje({ tipo: "ok", texto: "Evento creado correctamente." });
+    setMensaje({
+      tipo: "ok",
+      texto: "Evento creado correctamente.",
+    });
+
     resetFormulario();
     onEventCreated?.();
   };
@@ -225,6 +295,84 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
           <p className="event-form__hint">
             Tip: haz clic en el mapa para llenar automáticamente la coordenada.
           </p>
+
+          <div className="event-form__flyer">
+            <span className="event-form__flyer-title">
+              Flyer del evento
+            </span>
+
+            {!flyer ? (
+              <div
+                className={`event-form__dropzone ${
+                  arrastrandoFlyer
+                    ? "event-form__dropzone--dragging"
+                    : ""
+                }`}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setArrastrandoFlyer(true);
+                }}
+                onDragLeave={() => setArrastrandoFlyer(false)}
+                onDrop={handleFlyerDrop}
+                onClick={() => flyerInputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    flyerInputRef.current?.click();
+                  }
+                }}
+              >
+                <span className="event-form__dropzone-icon">
+                  🖼️
+                </span>
+
+                <span className="event-form__dropzone-main">
+                  Arrastra el flyer aquí
+                </span>
+
+                <span className="event-form__dropzone-secondary">
+                  o haz clic para seleccionar una imagen
+                </span>
+
+                <span className="event-form__dropzone-format">
+                  PNG, JPG, JPEG o WEBP
+                </span>
+
+                <input
+                  ref={flyerInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleFlyerChange}
+                  hidden
+                />
+              </div>
+            ) : (
+              <div className="event-form__flyer-preview">
+                {flyerPreview && (
+                  <img
+                    src={flyerPreview}
+                    alt="Vista previa del flyer"
+                  />
+                )}
+
+                <div className="event-form__flyer-info">
+                  <span className="event-form__flyer-name">
+                    {flyer.name}
+                  </span>
+
+                  <button
+                    type="button"
+                    className="event-form__flyer-remove"
+                    onClick={eliminarFlyer}
+                  >
+                    Quitar flyer
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <fieldset className="event-form__tipo-evento">
             <legend>Tipo de evento</legend>
