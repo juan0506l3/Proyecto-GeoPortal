@@ -200,7 +200,7 @@ function MapComponent({
       return vectorLayer;
     });
 
-    // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante 
+    // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante
     const eventosChannel = supabase
       .channel("eventos-live")
       .on(
@@ -289,7 +289,7 @@ function MapComponent({
 
     map.addOverlay(popup);
 
-    map.on("singleclick", (event) => {
+    map.on("singleclick", async (event) => {
       let hitFeature: FeatureLike | null = null;
       let hitLayer: VectorLayer<VectorSource> | null = null;
 
@@ -327,6 +327,11 @@ function MapComponent({
           | null
           | undefined;
 
+        const flyerPath = properties["flyer_path"] as
+          | string
+          | null
+          | undefined;
+
         const vigenciaHtml =
           fechaInicio && fechaFin
             ? `<br />Vigencia: ${new Date(
@@ -336,19 +341,72 @@ function MapComponent({
               ).toLocaleString()}`
             : "";
 
+        // Mostramos primero la información básica del evento.
         popupElement.innerHTML = `
-          <strong>${nombre}</strong>
-          <br />
-          Municipio: ${municipio}
-          <br />
-          Tipo: ${tipo}
-          <br />
-          Categoría: ${categoria}
-          ${vigenciaHtml}
+          <div class="map-popup__flyer">
+            ${
+              flyerPath
+                ? `<div class="map-popup__flyer-loading">
+                    Cargando flyer...
+                  </div>`
+                : ""
+            }
+          </div>
+
+          <div class="map-popup__info">
+            <strong>${nombre}</strong>
+            <br />
+            Municipio: ${municipio}
+            <br />
+            Tipo: ${tipo}
+            <br />
+            Categoría: ${categoria}
+            ${vigenciaHtml}
+          </div>
         `;
 
         popupElement.style.display = "block";
         popup.setPosition(event.coordinate);
+
+        // Si el evento tiene flyer, generamos una URL firmada
+        // porque el bucket "eventos-flyers" es privado.
+        if (flyerPath) {
+          const { data: signedUrlData, error: signedUrlError } =
+            await supabase.storage
+              .from("eventos-flyers")
+              .createSignedUrl(flyerPath, 3600);
+
+          if (signedUrlError || !signedUrlData?.signedUrl) {
+            console.error(
+              "Error obteniendo URL firmada del flyer:",
+              signedUrlError
+            );
+
+            const flyerContainer =
+              popupElement.querySelector(".map-popup__flyer");
+
+            if (flyerContainer) {
+              flyerContainer.innerHTML = `
+                <div class="map-popup__flyer-error">
+                  No se pudo cargar el flyer.
+                </div>
+              `;
+            }
+          } else {
+            const flyerContainer =
+              popupElement.querySelector(".map-popup__flyer");
+
+            if (flyerContainer) {
+              flyerContainer.innerHTML = `
+                <img
+                  class="map-popup__flyer-image"
+                  src="${signedUrlData.signedUrl}"
+                  alt="Flyer de ${nombre}"
+                />
+              `;
+            }
+          }
+        }
       } else {
         popupElement.style.display = "none";
       }
@@ -441,7 +499,3 @@ function MapComponent({
 }
 
 export default MapComponent;
-
-
-
-
