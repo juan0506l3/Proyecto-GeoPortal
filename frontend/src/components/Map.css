@@ -13,3 +13,35 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   font-size: 14px;
 }
+
+.map-popup__flyer {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.map-popup__flyer-image {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.map-popup__flyer-loading {
+  padding: 12px 8px;
+  text-align: center;
+  color: #666666;
+  font-size: 12px;
+}
+
+.map-popup__flyer-error {
+  padding: 8px;
+  text-align: center;
+  color: #b42318;
+  font-size: 12px;
+}
+
+.map-popup__info {
+  line-height: 1.5;
+}

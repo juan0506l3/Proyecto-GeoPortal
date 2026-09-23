@@ -19,7 +19,10 @@ import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import type { FeatureLike } from "ol/Feature";
 
-import { reprojectGeoJSON } from "../projections/reproject";
+import {
+  reprojectGeoJSON,
+  reprojectGeoJSONData,
+} from "../projections/reproject";
 
 import { detectLayerProjection } from "../projections/detectLayerProjection";
 import type { LayerProjectionInfo } from "../projections/detectLayerProjection";
@@ -113,9 +116,13 @@ function MapComponent({
     });
 
     deportivosLayer.set("layerName", "Eventos (Supabase)");
+
+    // Los eventos se almacenan en EPSG:4326.
+    // Esta propiedad se mantiene para la información del SRE
+    // de la capa de eventos.
     deportivosLayer.set(
       "layerProjectionCode",
-      layerTargetProjection ?? "EPSG:4326"
+      "EPSG:4326"
     );
 
     // Guarda TODOS los eventos traídos de Supabase (estáticos + dinámicos).
@@ -125,25 +132,60 @@ function MapComponent({
 
     const syncDeportivosSource = () => {
       const vigentes = filtrarEventosVigentes(allEventos);
+
+      // Los eventos se almacenan originalmente en EPSG:4326.
+      // Esto conserva todas sus propiedades, incluido flyer_path.
       const geojson = eventosToGeoJSON(vigentes);
-      const dataToDisplay = reprojectedLayer ?? geojson;
 
-      const sourceProjection =
-        reprojectedLayer && layerTargetProjection
-          ? layerTargetProjection
-          : "EPSG:4326";
+      // SRE al que se quiere reproyectar la capa.
+      // Si todavía no se ha seleccionado uno, usamos el SRE del visor.
+      const destino = layerTargetProjection ?? projection;
 
-      const features = reprojectGeoJSON(
-        dataToDisplay,
-        sourceProjection,
-        projection
-      );
+      // Primero generamos un NUEVO GeoJSON reproyectado desde
+      // EPSG:4326 hasta el SRE destino.
+      //
+      // Usamos reprojectGeoJSONData porque necesitamos conservar
+      // el GeoJSON y todas sus propiedades para poder hacer
+      // posteriormente la transformación hacia el visor.
+      const geojsonReprojectado =
+        reprojectGeoJSONData(
+          geojson,
+          "EPSG:4326",
+          destino
+        );
+
+      // OpenLayers necesita que las geometrías utilizadas por
+      // VectorSource estén finalmente en la proyección del View.
+      //
+      // Si el SRE destino ya coincide con el visor, no necesitamos
+      // una segunda transformación.
+      //
+      // Si son diferentes, transformamos el GeoJSON desde el
+      // SRE destino hasta el SRE utilizado por el mapa.
+      const features =
+        destino === projection
+          ? reprojectGeoJSON(
+              geojsonReprojectado,
+              destino,
+              projection
+            )
+          : reprojectGeoJSON(
+              geojsonReprojectado,
+              destino,
+              projection
+            );
 
       deportivosSource.clear();
       deportivosSource.addFeatures(features);
+
+      // La capa ahora representa el SRE destino seleccionado.
+      deportivosLayer.set(
+        "layerProjectionCode",
+        destino
+      );
     };
 
-    // --- Carga inicial de eventos desde Supabase (reemplaza al deportivos.geojson estático) ---
+    // --- Carga inicial de eventos desde Supabase ---
     supabase
       .from("eventos")
       .select("*")
@@ -161,9 +203,11 @@ function MapComponent({
           }
 
           allEventos = data;
+
           onLayerProjectionChange(
             detectLayerProjection(eventosToGeoJSON(allEventos))
           );
+
           syncDeportivosSource();
         }
       );
@@ -200,7 +244,7 @@ function MapComponent({
       return vectorLayer;
     });
 
-    // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante 
+    // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante
     const eventosChannel = supabase
       .channel("eventos-live")
       .on(
@@ -217,9 +261,11 @@ function MapComponent({
         { event: "UPDATE", schema: "public", table: "eventos" },
         (payload: any) => {
           const actualizado = payload.new as EventoRow;
+
           allEventos = allEventos.map((row) =>
             row.id === actualizado.id ? actualizado : row
           );
+
           syncDeportivosSource();
         }
       )
@@ -228,7 +274,11 @@ function MapComponent({
         { event: "DELETE", schema: "public", table: "eventos" },
         (payload: any) => {
           const eliminado = payload.old as { id: string };
-          allEventos = allEventos.filter((row) => row.id !== eliminado.id);
+
+          allEventos = allEventos.filter(
+            (row) => row.id !== eliminado.id
+          );
+
           syncDeportivosSource();
         }
       )
@@ -248,6 +298,7 @@ function MapComponent({
     });
 
     const saved = viewStateRef.current;
+
     const defaultCenter = isGeographic(projection)
       ? ([-75.58, 6.17] as [number, number])
       : (transformCoordinate(
@@ -257,7 +308,11 @@ function MapComponent({
         ) as [number, number]);
 
     const initialCenter = saved
-      ? transformCoordinate(saved.center, saved.projection, projection)
+      ? transformCoordinate(
+          saved.center,
+          saved.projection,
+          projection
+        )
       : defaultCenter;
 
     const initialZoom = saved ? saved.zoom : 12;
@@ -289,7 +344,7 @@ function MapComponent({
 
     map.addOverlay(popup);
 
-    map.on("singleclick", (event) => {
+    map.on("singleclick", async (event) => {
       let hitFeature: FeatureLike | null = null;
       let hitLayer: VectorLayer<VectorSource> | null = null;
 
@@ -313,6 +368,7 @@ function MapComponent({
         const nombre = properties["nombre"] ?? "Sin nombre";
         const municipio = properties["municipio"] ?? "-";
         const tipo = properties["tipo"] ?? "-";
+
         const categoria = getCategoryLabel(
           getFeatureCategory(properties)
         );
@@ -327,6 +383,11 @@ function MapComponent({
           | null
           | undefined;
 
+        const flyerPath = properties["flyer_path"] as
+          | string
+          | null
+          | undefined;
+
         const vigenciaHtml =
           fechaInicio && fechaFin
             ? `<br />Vigencia: ${new Date(
@@ -336,19 +397,72 @@ function MapComponent({
               ).toLocaleString()}`
             : "";
 
+        // Mostramos primero la información básica del evento.
         popupElement.innerHTML = `
-          <strong>${nombre}</strong>
-          <br />
-          Municipio: ${municipio}
-          <br />
-          Tipo: ${tipo}
-          <br />
-          Categoría: ${categoria}
-          ${vigenciaHtml}
+          <div class="map-popup__flyer">
+            ${
+              flyerPath
+                ? `<div class="map-popup__flyer-loading">
+                    Cargando flyer...
+                  </div>`
+                : ""
+            }
+          </div>
+
+          <div class="map-popup__info">
+            <strong>${nombre}</strong>
+            <br />
+            Municipio: ${municipio}
+            <br />
+            Tipo: ${tipo}
+            <br />
+            Categoría: ${categoria}
+            ${vigenciaHtml}
+          </div>
         `;
 
         popupElement.style.display = "block";
         popup.setPosition(event.coordinate);
+
+        // Si el evento tiene flyer, generamos una URL firmada
+        // porque el bucket "eventos-flyers" es privado.
+        if (flyerPath) {
+          const { data: signedUrlData, error: signedUrlError } =
+            await supabase.storage
+              .from("eventos-flyers")
+              .createSignedUrl(flyerPath, 3600);
+
+          if (signedUrlError || !signedUrlData?.signedUrl) {
+            console.error(
+              "Error obteniendo URL firmada del flyer:",
+              signedUrlError
+            );
+
+            const flyerContainer =
+              popupElement.querySelector(".map-popup__flyer");
+
+            if (flyerContainer) {
+              flyerContainer.innerHTML = `
+                <div class="map-popup__flyer-error">
+                  No se pudo cargar el flyer.
+                </div>
+              `;
+            }
+          } else {
+            const flyerContainer =
+              popupElement.querySelector(".map-popup__flyer");
+
+            if (flyerContainer) {
+              flyerContainer.innerHTML = `
+                <img
+                  class="map-popup__flyer-image"
+                  src="${signedUrlData.signedUrl}"
+                  alt="Flyer de ${nombre}"
+                />
+              `;
+            }
+          }
+        }
       } else {
         popupElement.style.display = "none";
       }
@@ -358,7 +472,9 @@ function MapComponent({
       const clicked = event.coordinate as [number, number];
 
       captureSource.clear();
-      captureSource.addFeature(new Feature(new Point(clicked)));
+      captureSource.addFeature(
+        new Feature(new Point(clicked))
+      );
 
       // Coordenada del clic siempre en EPSG:4326, para el formulario de eventos.
       if (onPointSelected) {
@@ -374,9 +490,9 @@ function MapComponent({
       if (!onCoordinateCapture) return;
 
       const layerName = hitLayer
-        ? ((hitLayer as VectorLayer<VectorSource>).get("layerName") as
-            | string
-            | undefined)
+        ? ((hitLayer as VectorLayer<VectorSource>).get(
+            "layerName"
+          ) as string | undefined)
         : undefined;
 
       const layerCode = hitLayer
@@ -386,7 +502,8 @@ function MapComponent({
         : undefined;
 
       const targetCode = layerCode ?? projection;
-      const displayName = layerName ?? "Vista del mapa (sin capa)";
+      const displayName =
+        layerName ?? "Vista del mapa (sin capa)";
 
       const [x, y] = transformCoordinate(
         clicked,
@@ -403,7 +520,9 @@ function MapComponent({
             layerName: displayName,
             x,
             y,
-            unit: isGeographic(targetCode) ? ("deg" as const) : ("m" as const),
+            unit: isGeographic(targetCode)
+              ? ("deg" as const)
+              : ("m" as const),
           },
         ],
       });
@@ -441,7 +560,3 @@ function MapComponent({
 }
 
 export default MapComponent;
-
-
-
-

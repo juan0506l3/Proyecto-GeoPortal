@@ -17,6 +17,9 @@ interface SidebarProps {
   // Coordenada del clic en el mapa en EPSG:4326, para el formulario de eventos.
   selectedPoint: { lng: number; lat: number } | null;
 
+  // Indica si el usuario autenticado es administrador.
+  isAdmin: boolean;
+
   onFileLoaded: (data: unknown, fileName: string) => void;
 
   activeCategories: Set<string>;
@@ -40,6 +43,7 @@ interface SidebarProps {
 function Sidebar({
   capturedPoint,
   selectedPoint,
+  isAdmin,
   onFileLoaded,
   activeCategories,
   onToggleCategory,
@@ -59,7 +63,9 @@ function Sidebar({
       <div className="sidebar__scroll">
         <CoordinateCapture point={capturedPoint} />
 
-        <EventForm coordinates={selectedPoint} />
+        {isAdmin && (
+          <EventForm coordinates={selectedPoint} />
+        )}
 
         <GeoJSONUploader onFileLoaded={onFileLoaded} />
 

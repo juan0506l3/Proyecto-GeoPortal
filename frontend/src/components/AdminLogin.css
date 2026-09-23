@@ -1,0 +1,164 @@
+.admin-login__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+
+  padding: 76px 24px 24px;
+
+  background: rgba(15, 23, 42, 0.25);
+  backdrop-filter: blur(2px);
+}
+
+.admin-login {
+  position: relative;
+
+  width: min(360px, calc(100vw - 48px));
+
+  padding: 26px;
+
+  border: 1px solid var(--gp-border);
+  border-radius: 14px;
+
+  background: var(--gp-surface);
+
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.2);
+}
+
+.admin-login__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+
+  width: 30px;
+  height: 30px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: transparent;
+  color: var(--gp-muted);
+
+  font-size: 24px;
+  line-height: 1;
+
+  cursor: pointer;
+}
+
+.admin-login__close:hover {
+  background: var(--gp-surface-alt);
+  color: var(--gp-ink);
+}
+
+.admin-login__header {
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+.admin-login__icon {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 30px;
+}
+
+.admin-login__header h2 {
+  margin: 0;
+
+  color: var(--gp-ink);
+
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.admin-login__header p {
+  margin: 7px 0 0;
+
+  color: var(--gp-muted);
+
+  font-size: 12px;
+}
+
+.admin-login__form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.admin-login__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-login__field span {
+  color: var(--gp-ink);
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-login__field input {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 10px 11px;
+
+  border: 1px solid var(--gp-border);
+  border-radius: 7px;
+
+  background: var(--gp-surface);
+  color: var(--gp-ink);
+
+  font-family: inherit;
+  font-size: 13px;
+
+  outline: none;
+}
+
+.admin-login__field input:focus {
+  border-color: var(--gp-primary);
+  box-shadow: 0 0 0 3px var(--gp-primary-soft);
+}
+
+.admin-login__error {
+  margin: -2px 0 0;
+
+  color: var(--gp-danger);
+
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.admin-login__submit {
+  width: 100%;
+
+  padding: 11px 14px;
+
+  border: none;
+  border-radius: 7px;
+
+  background: var(--gp-primary);
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.admin-login__submit:hover:not(:disabled) {
+  background: var(--gp-primary-dark, var(--gp-primary));
+}
+
+.admin-login__submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
