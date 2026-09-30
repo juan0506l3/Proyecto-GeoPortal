@@ -61,7 +61,6 @@ interface MapComponentProps {
   activeCategories: Set<string>;
   onLayerProjectionChange: (info: LayerProjectionInfo) => void;
   onCoordinateCapture?: (point: CapturedPoint) => void;
-
   onPointSelected?: (lonLat: [number, number]) => void;
 }
 
@@ -72,13 +71,13 @@ const ESRI_TILES =
 
 const SATELLITE_URL = `${ESRI_TILES}/World_Imagery/MapServer/tile/{z}/{y}/{x}`;
 
+
 const PLACES_URL = `${ESRI_TILES}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`;
 
 const ROADS_URL = `${ESRI_TILES}/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}`;
 
 const ESRI_ATTRIBUTIONS =
   "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community";
-
 
 const SATELLITE_FAILURE_LIMIT = 6;
 
@@ -113,11 +112,14 @@ function applyBaseMap(layers: BaseLayers, id: BaseMapId) {
   layers.labels.forEach((layer) => layer.setVisible(id === "hybrid"));
 }
 
-
-const PIN_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">' +
-  '<path d="M16 1C8 1 1.5 7.4 1.5 15.3 1.5 26 16 41 16 41s14.5-15 14.5-25.7C30.5 7.4 24 1 16 1z" fill="#f97316" stroke="#ffffff" stroke-width="2"/>' +
-  '<circle cx="16" cy="15" r="5.5" fill="#ffffff"/></svg>';
+const CAPTURE_MARKER_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">' +
+  '<circle cx="22" cy="22" r="14" fill="rgba(32,82,149,0.22)"/>' +
+  '<circle cx="22" cy="22" r="14" fill="none" stroke="#ffffff" stroke-width="4"/>' +
+  '<circle cx="22" cy="22" r="14" fill="none" stroke="#205295" stroke-width="2"/>' +
+  '<path d="M22 3v12M22 29v12M3 22h12M29 22h12" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>' +
+  '<path d="M22 3v12M22 29v12M3 22h12M29 22h12" stroke="#205295" stroke-width="2.5" stroke-linecap="round"/>' +
+  '<circle cx="22" cy="22" r="4.5" fill="#205295" stroke="#ffffff" stroke-width="2"/></svg>';
 
 function createCategoryStyle(activeCategories: Set<string>) {
   return (feature: FeatureLike) => {
@@ -150,7 +152,6 @@ function MapComponent({
   onPointSelected,
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
-
 
   const [baseMap, setBaseMap] = useState<BaseMapId>("hybrid");
   const [satelliteFailed, setSatelliteFailed] = useState(false);
@@ -187,8 +188,10 @@ function MapComponent({
 
       const geojson = eventosToGeoJSON(vigentes);
 
+  
       const destino = layerTargetProjection ?? projection;
 
+    
       const geojsonReprojectado =
         reprojectGeoJSONData(
           geojson,
@@ -212,6 +215,7 @@ function MapComponent({
       deportivosSource.clear();
       deportivosSource.addFeatures(features);
 
+  
       deportivosLayer.set(
         "layerProjectionCode",
         destino
@@ -319,8 +323,10 @@ function MapComponent({
       source: captureSource,
       style: new Style({
         image: new Icon({
-          src: "data:image/svg+xml;utf8," + encodeURIComponent(PIN_SVG),
-          anchor: [0.5, 1],
+          src:
+            "data:image/svg+xml;utf8," +
+            encodeURIComponent(CAPTURE_MARKER_SVG),
+          anchor: [0.5, 0.5],
         }),
       }),
     });
@@ -344,6 +350,7 @@ function MapComponent({
       : defaultCenter;
 
     const initialZoom = saved ? saved.zoom : 12;
+
 
     const osmLayer = new TileLayer({
       source: new OSM(),
@@ -406,7 +413,7 @@ function MapComponent({
     const popup = new Overlay({
       element: popupElement,
       positioning: "bottom-center",
-      stopEvent: true,
+      stopEvent: false,
       offset: [0, -10],
     });
 
@@ -465,21 +472,7 @@ function MapComponent({
               ).toLocaleString()}`
             : "";
 
-        const markerGeometry = (hitFeature as Feature).getGeometry();
-        const markerCoord = (
-          markerGeometry instanceof Point
-            ? markerGeometry.getCoordinates()
-            : event.coordinate
-        ) as [number, number];
-
-        const [markerLon, markerLat] = transformCoordinate(
-          markerCoord,
-          projection,
-          "EPSG:4326"
-        ) as [number, number];
-
-        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${markerLat},${markerLon}`;
-
+        
         popupElement.innerHTML = `
           <div class="map-popup__flyer">
             ${
@@ -500,20 +493,13 @@ function MapComponent({
             <br />
             Categoría: ${categoria}
             ${vigenciaHtml}
-            <a
-              class="map-popup__gmaps"
-              href="${googleMapsUrl}"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Abrir en Google Maps
-            </a>
           </div>
         `;
 
         popupElement.style.display = "block";
         popup.setPosition(event.coordinate);
 
+    
         if (flyerPath) {
           const { data: signedUrlData, error: signedUrlError } =
             await supabase.storage
