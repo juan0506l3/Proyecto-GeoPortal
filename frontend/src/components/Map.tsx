@@ -113,13 +113,9 @@ function applyBaseMap(layers: BaseLayers, id: BaseMapId) {
 }
 
 const CAPTURE_MARKER_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">' +
-  '<circle cx="22" cy="22" r="14" fill="rgba(32,82,149,0.22)"/>' +
-  '<circle cx="22" cy="22" r="14" fill="none" stroke="#ffffff" stroke-width="4"/>' +
-  '<circle cx="22" cy="22" r="14" fill="none" stroke="#205295" stroke-width="2"/>' +
-  '<path d="M22 3v12M22 29v12M3 22h12M29 22h12" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>' +
-  '<path d="M22 3v12M22 29v12M3 22h12M29 22h12" stroke="#205295" stroke-width="2.5" stroke-linecap="round"/>' +
-  '<circle cx="22" cy="22" r="4.5" fill="#205295" stroke="#ffffff" stroke-width="2"/></svg>';
+  '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="34" viewBox="0 0 32 42">' +
+  '<path d="M16 1C8 1 1.5 7.4 1.5 15.3 1.5 26 16 41 16 41s14.5-15 14.5-25.7C30.5 7.4 24 1 16 1z" fill="#205295" stroke="#ffffff" stroke-width="2"/>' +
+  '<circle cx="16" cy="15" r="5.5" fill="#ffffff"/></svg>';
 
 function createCategoryStyle(activeCategories: Set<string>) {
   return (feature: FeatureLike) => {
@@ -326,7 +322,7 @@ function MapComponent({
           src:
             "data:image/svg+xml;utf8," +
             encodeURIComponent(CAPTURE_MARKER_SVG),
-          anchor: [0.5, 0.5],
+          anchor: [0.5, 1],
         }),
       }),
     });
