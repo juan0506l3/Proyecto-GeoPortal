@@ -1,8 +1,96 @@
-.map-container {
+.map-wrapper {
+  position: relative;
   flex: 1;
-  width: 100%;
-  height: 100%;
   min-width: 0;
+  height: 100%;
+}
+
+.map-container {
+  position: absolute;
+  inset: 0;
+}
+
+.basemap-control {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.basemap-switch {
+  display: flex;
+  padding: 3px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.basemap-switch__btn {
+  padding: 7px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #4b5563;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.basemap-switch__btn:hover {
+  background: #f1f5f9;
+}
+
+.basemap-switch__btn--active,
+.basemap-switch__btn--active:hover {
+  background: #205295;
+  color: #ffffff;
+}
+
+.basemap-notice {
+  max-width: 260px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.map-container .ol-zoom {
+  top: 16px;
+  right: 16px;
+  left: auto;
+  padding: 0;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.map-container .ol-zoom button {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  border-radius: 0;
+  background: #ffffff;
+  color: #374151;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.map-container .ol-zoom button:hover,
+.map-container .ol-zoom button:focus {
+  background: #f1f5f9;
+}
+
+.map-container .ol-zoom .ol-zoom-in {
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .map-popup {
@@ -44,4 +132,21 @@
 
 .map-popup__info {
   line-height: 1.5;
+}
+
+.map-popup__gmaps {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.map-popup__gmaps:hover {
+  background: #1d4ed8;
 }

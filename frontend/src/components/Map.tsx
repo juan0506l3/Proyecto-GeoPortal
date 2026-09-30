@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
+import XYZ from "ol/source/XYZ";
 import { get as getProjection } from "ol/proj";
 
 import "./Map.css";
@@ -14,6 +15,8 @@ import Style from "ol/style/Style";
 import CircleStyle from "ol/style/Circle";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
+import Icon from "ol/style/Icon";
+import type BaseLayer from "ol/layer/Base";
 import Overlay from "ol/Overlay";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
@@ -58,14 +61,63 @@ interface MapComponentProps {
   activeCategories: Set<string>;
   onLayerProjectionChange: (info: LayerProjectionInfo) => void;
   onCoordinateCapture?: (point: CapturedPoint) => void;
-  // Coordenada del clic en el mapa, siempre en EPSG:4326 (lon, lat).
-  // Se usa para prellenar el formulario de creación de eventos.
+
   onPointSelected?: (lonLat: [number, number]) => void;
 }
 
-// Cada cuánto se vuelve a evaluar qué eventos dinámicos siguen vigentes
-// (por si el reloj cruza fecha_inicio/fecha_fin sin que haya cambios en la BD).
 const INTERVALO_REVISION_VIGENCIA_MS = 60000;
+
+const ESRI_TILES =
+  "https://server.arcgisonline.com/ArcGIS/rest/services";
+
+const SATELLITE_URL = `${ESRI_TILES}/World_Imagery/MapServer/tile/{z}/{y}/{x}`;
+
+const PLACES_URL = `${ESRI_TILES}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`;
+
+const ROADS_URL = `${ESRI_TILES}/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}`;
+
+const ESRI_ATTRIBUTIONS =
+  "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community";
+
+
+const SATELLITE_FAILURE_LIMIT = 6;
+
+type BaseMapId = "hybrid" | "satellite" | "osm";
+
+const BASE_MAP_OPTIONS: { id: BaseMapId; label: string }[] = [
+  { id: "hybrid", label: "Híbrido" },
+  { id: "satellite", label: "Satélite" },
+  { id: "osm", label: "Mapa" },
+];
+
+interface BaseLayers {
+  osm: BaseLayer;
+  satellite: BaseLayer;
+  labels: BaseLayer[];
+}
+
+function createEsriLayer(url: string) {
+  return new TileLayer({
+    source: new XYZ({
+      url,
+      attributions: ESRI_ATTRIBUTIONS,
+      maxZoom: 19,
+    }),
+    visible: false,
+  });
+}
+
+function applyBaseMap(layers: BaseLayers, id: BaseMapId) {
+  layers.osm.setVisible(id === "osm");
+  layers.satellite.setVisible(id !== "osm");
+  layers.labels.forEach((layer) => layer.setVisible(id === "hybrid"));
+}
+
+
+const PIN_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">' +
+  '<path d="M16 1C8 1 1.5 7.4 1.5 15.3 1.5 26 16 41 16 41s14.5-15 14.5-25.7C30.5 7.4 24 1 16 1z" fill="#f97316" stroke="#ffffff" stroke-width="2"/>' +
+  '<circle cx="16" cy="15" r="5.5" fill="#ffffff"/></svg>';
 
 function createCategoryStyle(activeCategories: Set<string>) {
   return (feature: FeatureLike) => {
@@ -99,6 +151,12 @@ function MapComponent({
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
 
+
+  const [baseMap, setBaseMap] = useState<BaseMapId>("hybrid");
+  const [satelliteFailed, setSatelliteFailed] = useState(false);
+  const baseMapRef = useRef<BaseMapId>(baseMap);
+  const baseLayersRef = useRef<BaseLayers | null>(null);
+
   const viewStateRef = useRef<{
     center: [number, number];
     zoom: number;
@@ -117,36 +175,20 @@ function MapComponent({
 
     deportivosLayer.set("layerName", "Eventos (Supabase)");
 
-    // Los eventos se almacenan en EPSG:4326.
-    // Esta propiedad se mantiene para la información del SRE
-    // de la capa de eventos.
     deportivosLayer.set(
       "layerProjectionCode",
       "EPSG:4326"
     );
 
-    // Guarda TODOS los eventos traídos de Supabase (estáticos + dinámicos).
-    // A partir de esta lista se recalcula, en cada sync, cuáles están
-    // vigentes ahora mismo según fecha_inicio/fecha_fin.
     let allEventos: EventoRow[] = [];
 
     const syncDeportivosSource = () => {
       const vigentes = filtrarEventosVigentes(allEventos);
 
-      // Los eventos se almacenan originalmente en EPSG:4326.
-      // Esto conserva todas sus propiedades, incluido flyer_path.
       const geojson = eventosToGeoJSON(vigentes);
 
-      // SRE al que se quiere reproyectar la capa.
-      // Si todavía no se ha seleccionado uno, usamos el SRE del visor.
       const destino = layerTargetProjection ?? projection;
 
-      // Primero generamos un NUEVO GeoJSON reproyectado desde
-      // EPSG:4326 hasta el SRE destino.
-      //
-      // Usamos reprojectGeoJSONData porque necesitamos conservar
-      // el GeoJSON y todas sus propiedades para poder hacer
-      // posteriormente la transformación hacia el visor.
       const geojsonReprojectado =
         reprojectGeoJSONData(
           geojson,
@@ -154,14 +196,6 @@ function MapComponent({
           destino
         );
 
-      // OpenLayers necesita que las geometrías utilizadas por
-      // VectorSource estén finalmente en la proyección del View.
-      //
-      // Si el SRE destino ya coincide con el visor, no necesitamos
-      // una segunda transformación.
-      //
-      // Si son diferentes, transformamos el GeoJSON desde el
-      // SRE destino hasta el SRE utilizado por el mapa.
       const features =
         destino === projection
           ? reprojectGeoJSON(
@@ -178,14 +212,12 @@ function MapComponent({
       deportivosSource.clear();
       deportivosSource.addFeatures(features);
 
-      // La capa ahora representa el SRE destino seleccionado.
       deportivosLayer.set(
         "layerProjectionCode",
         destino
       );
     };
 
-    // --- Carga inicial de eventos desde Supabase ---
     supabase
       .from("eventos")
       .select("*")
@@ -212,8 +244,6 @@ function MapComponent({
         }
       );
 
-    // Revisión periódica: hace que los eventos dinámicos aparezcan o
-    // desaparezcan solos al cruzar su fecha_inicio / fecha_fin.
     const vigenciaIntervalId = window.setInterval(
       syncDeportivosSource,
       INTERVALO_REVISION_VIGENCIA_MS
@@ -244,7 +274,6 @@ function MapComponent({
       return vectorLayer;
     });
 
-    // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante
     const eventosChannel = supabase
       .channel("eventos-live")
       .on(
@@ -289,10 +318,9 @@ function MapComponent({
     const captureLayer = new VectorLayer({
       source: captureSource,
       style: new Style({
-        image: new CircleStyle({
-          radius: 8,
-          fill: new Fill({ color: "#1e88e5" }),
-          stroke: new Stroke({ color: "white", width: 2 }),
+        image: new Icon({
+          src: "data:image/svg+xml;utf8," + encodeURIComponent(PIN_SVG),
+          anchor: [0.5, 1],
         }),
       }),
     });
@@ -317,10 +345,50 @@ function MapComponent({
 
     const initialZoom = saved ? saved.zoom : 12;
 
+    const osmLayer = new TileLayer({
+      source: new OSM(),
+      visible: false,
+    });
+
+    const satelliteLayer = createEsriLayer(SATELLITE_URL);
+    const placesLayer = createEsriLayer(PLACES_URL);
+    const roadsLayer = createEsriLayer(ROADS_URL);
+
+    const baseLayers: BaseLayers = {
+      osm: osmLayer,
+      satellite: satelliteLayer,
+      labels: [placesLayer, roadsLayer],
+    };
+
+    applyBaseMap(baseLayers, baseMapRef.current);
+    baseLayersRef.current = baseLayers;
+
+    const satelliteSource = satelliteLayer.getSource() as XYZ;
+    let consecutiveErrors = 0;
+
+    satelliteSource.on("tileloadend", () => {
+      consecutiveErrors = 0;
+    });
+
+    satelliteSource.on("tileloaderror", () => {
+      consecutiveErrors += 1;
+
+      if (
+        consecutiveErrors >= SATELLITE_FAILURE_LIMIT &&
+        baseMapRef.current !== "osm"
+      ) {
+        setSatelliteFailed(true);
+        setBaseMap("osm");
+      }
+    });
+
     const map = new Map({
       target: mapRef.current,
       layers: [
-        new TileLayer({ source: new OSM() }),
+        osmLayer,
+        satelliteLayer,
+        placesLayer,
+        roadsLayer,
         deportivosLayer,
         ...uploadedLayers,
         captureLayer,
@@ -338,7 +406,7 @@ function MapComponent({
     const popup = new Overlay({
       element: popupElement,
       positioning: "bottom-center",
-      stopEvent: false,
+      stopEvent: true,
       offset: [0, -10],
     });
 
@@ -397,7 +465,21 @@ function MapComponent({
               ).toLocaleString()}`
             : "";
 
-        // Mostramos primero la información básica del evento.
+        const markerGeometry = (hitFeature as Feature).getGeometry();
+        const markerCoord = (
+          markerGeometry instanceof Point
+            ? markerGeometry.getCoordinates()
+            : event.coordinate
+        ) as [number, number];
+
+        const [markerLon, markerLat] = transformCoordinate(
+          markerCoord,
+          projection,
+          "EPSG:4326"
+        ) as [number, number];
+
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${markerLat},${markerLon}`;
+
         popupElement.innerHTML = `
           <div class="map-popup__flyer">
             ${
@@ -418,14 +500,20 @@ function MapComponent({
             <br />
             Categoría: ${categoria}
             ${vigenciaHtml}
+            <a
+              class="map-popup__gmaps"
+              href="${googleMapsUrl}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir en Google Maps
+            </a>
           </div>
         `;
 
         popupElement.style.display = "block";
         popup.setPosition(event.coordinate);
 
-        // Si el evento tiene flyer, generamos una URL firmada
-        // porque el bucket "eventos-flyers" es privado.
         if (flyerPath) {
           const { data: signedUrlData, error: signedUrlError } =
             await supabase.storage
@@ -467,8 +555,6 @@ function MapComponent({
         popupElement.style.display = "none";
       }
 
-      // --- Captura de coordenadas: una sola entrada, en el SRE de la
-      // capa donde cayó el clic (o del mapa base si no hay capa) ---
       const clicked = event.coordinate as [number, number];
 
       captureSource.clear();
@@ -476,7 +562,6 @@ function MapComponent({
         new Feature(new Point(clicked))
       );
 
-      // Coordenada del clic siempre en EPSG:4326, para el formulario de eventos.
       if (onPointSelected) {
         const lonLat = transformCoordinate(
           clicked,
@@ -529,7 +614,6 @@ function MapComponent({
     });
 
     return () => {
-      // 🆕 Guarda dónde estaba mirando el usuario antes de destruir el mapa
       const currentView = map.getView();
       const center = currentView.getCenter();
 
@@ -556,7 +640,47 @@ function MapComponent({
     onPointSelected,
   ]);
 
-  return <div ref={mapRef} className="map-container" />;
+  useEffect(() => {
+    baseMapRef.current = baseMap;
+
+    if (baseLayersRef.current) {
+      applyBaseMap(baseLayersRef.current, baseMap);
+    }
+  }, [baseMap]);
+
+  const handleBaseMapChange = (id: BaseMapId) => {
+    setSatelliteFailed(false);
+    setBaseMap(id);
+  };
+
+  return (
+    <div className="map-wrapper">
+      <div ref={mapRef} className="map-container" />
+
+      <div className="basemap-control">
+        {satelliteFailed && baseMap === "osm" && (
+          <div className="basemap-notice">
+            El satélite no está disponible ahora. Mostrando OpenStreetMap.
+          </div>
+        )}
+
+        <div className="basemap-switch" role="group" aria-label="Mapa base">
+          {BASE_MAP_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`basemap-switch__btn${
+                baseMap === option.id ? " basemap-switch__btn--active" : ""
+              }`}
+              onClick={() => handleBaseMapChange(option.id)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default MapComponent;
