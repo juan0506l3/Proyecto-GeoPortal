@@ -3,10 +3,14 @@ import type { DragEvent, FormEvent, ChangeEvent } from "react";
 import { EVENT_CATEGORIES } from "../projections/eventCategories";
 import { crearEvento } from "../projections/eventosSupabase";
 import type { NuevoEvento } from "../projections/eventosSupabase";
+import {
+  MUNICIPIOS,
+  normalizarMunicipio,
+  normalizarUrl,
+} from "../projections/eventoUtils";
 import "./EventForm.css";
 
 interface EventFormProps {
-  // Coordenada capturada al hacer clic en el mapa (siempre en EPSG:4326 / WGS84).
   coordinates: { lng: number; lat: number } | null;
   onEventCreated?: () => void;
 }
@@ -18,6 +22,7 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
 
   const [nombre, setNombre] = useState("");
   const [municipio, setMunicipio] = useState("");
+  const [direccion, setDireccion] = useState("");
   const [tipo, setTipo] = useState("");
   const [categoria, setCategoria] = useState(EVENT_CATEGORIES[0]?.id ?? "");
   const [lng, setLng] = useState("");
@@ -30,14 +35,13 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
   const [flyer, setFlyer] = useState<File | null>(null);
   const [flyerPreview, setFlyerPreview] = useState<string | null>(null);
   const [arrastrandoFlyer, setArrastrandoFlyer] = useState(false);
+  const [flyerUrl, setFlyerUrl] = useState("");
 
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
 
   const flyerInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Cada vez que capturan un punto nuevo en el mapa, se autocompletan
-  // los campos de longitud/latitud (el usuario aún puede editarlos a mano).
   useEffect(() => {
     if (coordinates) {
       setLng(coordinates.lng.toFixed(6));
@@ -45,7 +49,6 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
     }
   }, [coordinates]);
 
-  // Libera la URL temporal utilizada para la vista previa del flyer.
   useEffect(() => {
     return () => {
       if (flyerPreview) {
@@ -105,6 +108,8 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
   const resetFormulario = () => {
     setNombre("");
     setMunicipio("");
+    setDireccion("");
+    setFlyerUrl("");
     setTipo("");
     setEsDinamico(false);
     setFechaInicio("");
@@ -131,6 +136,25 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
       setMensaje({
         tipo: "error",
         texto: "Selecciona un punto en el mapa o ingresa coordenadas válidas.",
+      });
+      return;
+    }
+
+    if (esDinamico && !direccion.trim()) {
+      setMensaje({
+        tipo: "error",
+        texto: "Ingresa la dirección del lugar del evento.",
+      });
+      return;
+    }
+
+    const enlaceFlyer = normalizarUrl(flyerUrl);
+
+    if (flyerUrl.trim() && !enlaceFlyer) {
+      setMensaje({
+        tipo: "error",
+        texto:
+          "El enlace de la publicación no es válido. Escribe una dirección web completa, por ejemplo https://www.instagram.com/...",
       });
       return;
     }
@@ -164,9 +188,11 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
 
     const nuevoEvento: NuevoEvento = {
       nombre: nombre.trim(),
-      municipio: municipio.trim(),
+      municipio: normalizarMunicipio(municipio) ?? municipio.trim(),
       tipo: tipo.trim(),
       categoria,
+      direccion: direccion.trim() || null,
+      flyer_url: enlaceFlyer,
       lng: lngNum,
       lat: latNum,
       fecha_inicio: fechaInicioIso,
@@ -235,8 +261,31 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
               type="text"
               value={municipio}
               onChange={(e) => setMunicipio(e.target.value)}
+              onBlur={() =>
+                setMunicipio((actual) => normalizarMunicipio(actual) ?? actual)
+              }
+              list="municipios-valle-aburra"
               placeholder="Ej. Itagüí"
               required
+            />
+
+            <datalist id="municipios-valle-aburra">
+              {MUNICIPIOS.map((nombreMunicipio) => (
+                <option key={nombreMunicipio} value={nombreMunicipio} />
+              ))}
+            </datalist>
+          </label>
+
+          <label className="event-form__field">
+            <span>
+              Dirección del lugar{esDinamico ? "" : " (opcional)"}
+            </span>
+            <input
+              type="text"
+              value={direccion}
+              onChange={(e) => setDireccion(e.target.value)}
+              placeholder="Ej. Cra. 50 #50-01, Prado"
+              required={esDinamico}
             />
           </label>
 
@@ -373,6 +422,17 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
               </div>
             )}
           </div>
+
+          <label className="event-form__field">
+            <span>Enlace de la publicación (opcional)</span>
+            <input
+              type="text"
+              inputMode="url"
+              value={flyerUrl}
+              onChange={(e) => setFlyerUrl(e.target.value)}
+              placeholder="https://www.instagram.com/p/..."
+            />
+          </label>
 
           <fieldset className="event-form__tipo-evento">
             <legend>Tipo de evento</legend>

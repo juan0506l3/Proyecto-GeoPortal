@@ -53,6 +53,13 @@ import {
 
 import type { CapturedPoint } from "../projections/types";
 
+import {
+  escapeHtml,
+  etiquetaEnlace,
+  normalizarMunicipio,
+  normalizarUrl,
+} from "../projections/eventoUtils";
+
 interface MapComponentProps {
   projection: string;
   layers: GeoJSONLayer[];
@@ -66,6 +73,7 @@ interface MapComponentProps {
 
 const INTERVALO_REVISION_VIGENCIA_MS = 60000;
 
+
 const ESRI_TILES =
   "https://server.arcgisonline.com/ArcGIS/rest/services";
 
@@ -73,6 +81,7 @@ const SATELLITE_URL = `${ESRI_TILES}/World_Imagery/MapServer/tile/{z}/{y}/{x}`;
 
 
 const PLACES_URL = `${ESRI_TILES}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`;
+
 
 const ROADS_URL = `${ESRI_TILES}/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}`;
 
@@ -105,6 +114,7 @@ function createEsriLayer(url: string) {
     visible: false,
   });
 }
+
 
 function applyBaseMap(layers: BaseLayers, id: BaseMapId) {
   layers.osm.setVisible(id === "osm");
@@ -149,6 +159,7 @@ function MapComponent({
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
 
+  
   const [baseMap, setBaseMap] = useState<BaseMapId>("hybrid");
   const [satelliteFailed, setSatelliteFailed] = useState(false);
   const baseMapRef = useRef<BaseMapId>(baseMap);
@@ -172,6 +183,7 @@ function MapComponent({
 
     deportivosLayer.set("layerName", "Eventos (Supabase)");
 
+
     deportivosLayer.set(
       "layerProjectionCode",
       "EPSG:4326"
@@ -182,18 +194,18 @@ function MapComponent({
     const syncDeportivosSource = () => {
       const vigentes = filtrarEventosVigentes(allEventos);
 
+    
       const geojson = eventosToGeoJSON(vigentes);
 
-  
       const destino = layerTargetProjection ?? projection;
 
-    
       const geojsonReprojectado =
         reprojectGeoJSONData(
           geojson,
           "EPSG:4326",
           destino
         );
+
 
       const features =
         destino === projection
@@ -211,13 +223,14 @@ function MapComponent({
       deportivosSource.clear();
       deportivosSource.addFeatures(features);
 
-  
+      
       deportivosLayer.set(
         "layerProjectionCode",
         destino
       );
     };
 
+    
     supabase
       .from("eventos")
       .select("*")
@@ -244,6 +257,8 @@ function MapComponent({
         }
       );
 
+    
+    
     const vigenciaIntervalId = window.setInterval(
       syncDeportivosSource,
       INTERVALO_REVISION_VIGENCIA_MS
@@ -274,6 +289,7 @@ function MapComponent({
       return vectorLayer;
     });
 
+    
     const eventosChannel = supabase
       .channel("eventos-live")
       .on(
@@ -347,7 +363,7 @@ function MapComponent({
 
     const initialZoom = saved ? saved.zoom : 12;
 
-
+    
     const osmLayer = new TileLayer({
       source: new OSM(),
       visible: false,
@@ -366,6 +382,7 @@ function MapComponent({
     applyBaseMap(baseLayers, baseMapRef.current);
     baseLayersRef.current = baseLayers;
 
+    
     const satelliteSource = satelliteLayer.getSource() as XYZ;
     let consecutiveErrors = 0;
 
@@ -403,13 +420,16 @@ function MapComponent({
       }),
     });
 
+    const resizeObserver = new ResizeObserver(() => map.updateSize());
+    resizeObserver.observe(mapRef.current);
+
     const popupElement = document.createElement("div");
     popupElement.className = "map-popup";
 
     const popup = new Overlay({
       element: popupElement,
       positioning: "bottom-center",
-      stopEvent: false,
+      stopEvent: true,
       offset: [0, -10],
     });
 
@@ -436,9 +456,23 @@ function MapComponent({
           hitFeature as FeatureLike
         ).getProperties() as Record<string, unknown>;
 
-        const nombre = properties["nombre"] ?? "Sin nombre";
-        const municipio = properties["municipio"] ?? "-";
-        const tipo = properties["tipo"] ?? "-";
+        const nombre = escapeHtml(properties["nombre"] ?? "Sin nombre");
+
+        const municipio = escapeHtml(
+          normalizarMunicipio(
+            properties["municipio"] as string | null | undefined
+          ) ?? "-"
+        );
+
+        const tipo = escapeHtml(properties["tipo"] ?? "-");
+
+        const direccion = properties["direccion"]
+          ? escapeHtml(properties["direccion"])
+          : null;
+
+        const enlacePublicacion = normalizarUrl(
+          properties["flyer_url"] as string | null | undefined
+        );
 
         const categoria = getCategoryLabel(
           getFeatureCategory(properties)
@@ -468,6 +502,18 @@ function MapComponent({
               ).toLocaleString()}`
             : "";
 
+        const direccionHtml = direccion
+          ? `<br />Dirección: ${direccion}`
+          : "";
+
+        const enlaceHtml = enlacePublicacion
+          ? `<br /><a class="map-popup__link" href="${escapeHtml(
+              enlacePublicacion
+            )}" target="_blank" rel="noopener noreferrer">${etiquetaEnlace(
+              enlacePublicacion
+            )} ↗</a>`
+          : "";
+
         
         popupElement.innerHTML = `
           <div class="map-popup__flyer">
@@ -484,18 +530,21 @@ function MapComponent({
             <strong>${nombre}</strong>
             <br />
             Municipio: ${municipio}
+            ${direccionHtml}
             <br />
             Tipo: ${tipo}
             <br />
             Categoría: ${categoria}
             ${vigenciaHtml}
+            ${enlaceHtml}
           </div>
         `;
 
         popupElement.style.display = "block";
         popup.setPosition(event.coordinate);
 
-    
+        
+
         if (flyerPath) {
           const { data: signedUrlData, error: signedUrlError } =
             await supabase.storage
@@ -609,6 +658,7 @@ function MapComponent({
 
       window.clearInterval(vigenciaIntervalId);
       supabase.removeChannel(eventosChannel);
+      resizeObserver.disconnect();
       map.setTarget(undefined);
     };
   }, [
@@ -622,6 +672,7 @@ function MapComponent({
     onPointSelected,
   ]);
 
+  
   useEffect(() => {
     baseMapRef.current = baseMap;
 

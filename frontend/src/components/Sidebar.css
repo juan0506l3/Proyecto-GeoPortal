@@ -55,3 +55,20 @@
       border-top: 1px solid var(--gp-border);
     }
   }
+
+.sidebar { position: relative; }
+
+.sidebar__toggle {
+  position: absolute; top: 50%; left: -26px; transform: translateY(-50%);
+  z-index: 10; display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 56px; padding: 0;
+  border: 1px solid var(--gp-border); border-right: none;
+  border-radius: 10px 0 0 10px; background: #ffffff; color: var(--gp-primary);
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.2); cursor: pointer;
+}
+.sidebar__toggle:hover { background: var(--gp-primary-soft); }
+.sidebar__toggle svg { transition: transform 0.2s ease; }
+
+.sidebar.sidebar--collapsed { width: 0; min-width: 0; max-width: 0; border-left: none; }
+.sidebar.sidebar--collapsed .sidebar__scroll { display: none; }
+.sidebar.sidebar--collapsed .sidebar__toggle svg { transform: rotate(180deg); }

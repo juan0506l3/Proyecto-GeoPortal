@@ -135,3 +135,9 @@
 .map-popup__info {
   line-height: 1.5;
 }
+
+.map-popup__link {
+  display: inline-block; margin-top: 6px;
+  color: #205295; font-weight: 600; text-decoration: none;
+}
+.map-popup__link:hover { text-decoration: underline; }
