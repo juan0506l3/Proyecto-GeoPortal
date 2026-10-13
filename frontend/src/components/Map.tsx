@@ -161,9 +161,32 @@ function MapComponent({
         if (!tileCoord) return undefined;
 
         const [z, x, y] = tileCoord;
+
+        if (
+          !Number.isInteger(z) ||
+          z < 0 ||
+          z > 22
+        ) {
+          return undefined;
+        }
+
+        const limite = 2 ** z;
         const xyzY = -y - 1;
 
-        return `${z}/${x}/${xyzY}`;
+        // No solicitar teselas que estén fuera del mundo vertical.
+        if (
+          !Number.isInteger(x) ||
+          !Number.isInteger(xyzY) ||
+          xyzY < 0 ||
+          xyzY >= limite
+        ) {
+          return undefined;
+        }
+
+        // Normalizar X para admitir el desplazamiento horizontal del mapa.
+        const xyzX = ((x % limite) + limite) % limite;
+
+        return `${z}/${xyzX}/${xyzY}`;
       },
 
       tileLoadFunction: (tile, url) => {
