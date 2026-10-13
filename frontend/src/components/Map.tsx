@@ -1,15 +1,27 @@
+
 import { useEffect, useRef } from "react";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
+import VectorLayer from "ol/layer/Vector";
+import VectorTileLayer from "ol/layer/VectorTile";
 import OSM from "ol/source/OSM";
+import VectorSource from "ol/source/Vector";
+import VectorTileSource from "ol/source/VectorTile";
+import VectorTile from "ol/VectorTile";
+import TileState from "ol/TileState";
+import MVT from "ol/format/MVT";
+import { createXYZ } from "ol/tilegrid";
 import { get as getProjection } from "ol/proj";
+import type { Extent } from "ol/extent";
+import type Projection from "ol/proj/Projection";
+import type { default as OlFeature } from "ol/Feature";
+import type Geometry from "ol/geom/Geometry";
 
 import "./Map.css";
 import "ol/ol.css";
 
-import VectorLayer from "ol/layer/Vector";
-import VectorSource from "ol/source/Vector";
+import type BaseLayer from "ol/layer/Base";
 import Style from "ol/style/Style";
 import CircleStyle from "ol/style/Circle";
 import Fill from "ol/style/Fill";
@@ -19,10 +31,7 @@ import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
 import type { FeatureLike } from "ol/Feature";
 
-import {
-  reprojectGeoJSON,
-  reprojectGeoJSONData,
-} from "../projections/reproject";
+import { reprojectGeoJSON } from "../projections/reproject";
 
 import { detectLayerProjection } from "../projections/detectLayerProjection";
 import type { LayerProjectionInfo } from "../projections/detectLayerProjection";
@@ -44,8 +53,7 @@ import {
 import { supabase } from "../lib/supabaseClient";
 import {
   eventosToGeoJSON,
-  filtrarEventosVigentes,
-  type EventoRow,
+  esEventoVigente,
 } from "../projections/eventosSupabase";
 
 import type { CapturedPoint } from "../projections/types";
@@ -63,8 +71,7 @@ interface MapComponentProps {
   onPointSelected?: (lonLat: [number, number]) => void;
 }
 
-// Cada cuánto se vuelve a evaluar qué eventos dinámicos siguen vigentes
-// (por si el reloj cruza fecha_inicio/fecha_fin sin que haya cambios en la BD).
+// Cada cuánto se vuelve a evaluar la vigencia de los eventos dinámicos.
 const INTERVALO_REVISION_VIGENCIA_MS = 60000;
 
 function createCategoryStyle(activeCategories: Set<string>) {
@@ -84,6 +91,37 @@ function createCategoryStyle(activeCategories: Set<string>) {
         stroke: new Stroke({ color: "white", width: 2 }),
       }),
     });
+  };
+}
+
+// Conserva los filtros por categoría y oculta los eventos dinámicos
+// que estén fuera de su periodo de vigencia.
+function createEventCategoryStyle(activeCategories: Set<string>) {
+  const categoryStyle = createCategoryStyle(activeCategories);
+
+  return (feature: FeatureLike) => {
+    const properties = feature.getProperties() as Record<string, unknown>;
+
+    const fechaInicio =
+      typeof properties["fecha_inicio"] === "string"
+        ? properties["fecha_inicio"]
+        : null;
+
+    const fechaFin =
+      typeof properties["fecha_fin"] === "string"
+        ? properties["fecha_fin"]
+        : null;
+
+    if (
+      !esEventoVigente({
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+      })
+    ) {
+      return undefined;
+    }
+
+    return categoryStyle(feature);
   };
 }
 
@@ -108,116 +146,120 @@ function MapComponent({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const deportivosSource = new VectorSource();
+    // --- Capa de eventos de Supabase mediante teselas vectoriales ---
 
-    const deportivosLayer = new VectorLayer({
-      source: deportivosSource,
-      style: createCategoryStyle(activeCategories),
+    const eventosTileSource = new VectorTileSource({
+      format: new MVT(),
+      projection: "EPSG:3857",
+      tileGrid: createXYZ({
+        maxZoom: 22,
+        tileSize: 256,
+      }),
+
+      // Convierte la coordenada Y interna de OpenLayers a XYZ.
+      tileUrlFunction: (tileCoord) => {
+        if (!tileCoord) return undefined;
+
+        const [z, x, y] = tileCoord;
+        const xyzY = -y - 1;
+
+        return `${z}/${x}/${xyzY}`;
+      },
+
+      tileLoadFunction: (tile, url) => {
+        // OpenLayers tipa el argumento como Tile en esta función.
+        // La fuente VectorTile crea objetos VectorTile.
+        const vectorTile = tile as VectorTile<OlFeature<Geometry>>;
+
+        vectorTile.setLoader(
+          (
+            extent: Extent,
+            _resolution: number,
+            tileProjection: Projection
+          ) => {
+            void (async () => {
+              try {
+                const [z, x, y] = url.split("/").map(Number);
+
+                if (
+                  !Number.isInteger(z) ||
+                  !Number.isInteger(x) ||
+                  !Number.isInteger(y)
+                ) {
+                  throw new Error(
+                    "Coordenadas de tesela no válidas."
+                  );
+                }
+
+                const { data, error } = await supabase.rpc(
+                  "eventos_mvt_base64",
+                  {
+                    p_z: z,
+                    p_x: x,
+                    p_y: y,
+                  }
+                );
+
+                if (error) {
+                  throw error;
+                }
+
+                if (!data) {
+                  vectorTile.setFeatures([]);
+                  return;
+                }
+
+                const binary = window.atob(data);
+                const bytes = new Uint8Array(binary.length);
+
+                for (let i = 0; i < binary.length; i++) {
+                  bytes[i] = binary.charCodeAt(i);
+                }
+
+                const format = vectorTile.getFormat();
+
+                const features = format.readFeatures(bytes, {
+                  extent,
+                  featureProjection: tileProjection,
+                });
+
+                vectorTile.setFeatures(features);
+              } catch (error) {
+                console.error(
+                  "Error cargando tesela de eventos desde Supabase:",
+                  error
+                );
+
+                // Informa a OpenLayers del fallo de carga.
+                vectorTile.setState(TileState.ERROR);
+              }
+            })();
+          }
+        );
+      },
+    });
+
+    const deportivosLayer = new VectorTileLayer({
+      source: eventosTileSource,
+      style: createEventCategoryStyle(activeCategories),
     });
 
     deportivosLayer.set("layerName", "Eventos (Supabase)");
 
-    // Los eventos se almacenan en EPSG:4326.
-    // Esta propiedad se mantiene para la información del SRE
-    // de la capa de eventos.
-    deportivosLayer.set(
-      "layerProjectionCode",
-      "EPSG:4326"
+    // Las coordenadas originales de los eventos están en EPSG:4326.
+    deportivosLayer.set("layerProjectionCode", "EPSG:4326");
+
+    // Conserva la detección de la proyección declarada de la capa.
+    onLayerProjectionChange(
+      detectLayerProjection(eventosToGeoJSON([]))
     );
 
-    // Guarda TODOS los eventos traídos de Supabase (estáticos + dinámicos).
-    // A partir de esta lista se recalcula, en cada sync, cuáles están
-    // vigentes ahora mismo según fecha_inicio/fecha_fin.
-    let allEventos: EventoRow[] = [];
+    // Actualiza los estilos cuando pueda cambiar la vigencia de un evento.
+    const vigenciaIntervalId = window.setInterval(() => {
+      deportivosLayer.changed();
+    }, INTERVALO_REVISION_VIGENCIA_MS);
 
-    const syncDeportivosSource = () => {
-      const vigentes = filtrarEventosVigentes(allEventos);
-
-      // Los eventos se almacenan originalmente en EPSG:4326.
-      // Esto conserva todas sus propiedades, incluido flyer_path.
-      const geojson = eventosToGeoJSON(vigentes);
-
-      // SRE al que se quiere reproyectar la capa.
-      // Si todavía no se ha seleccionado uno, usamos el SRE del visor.
-      const destino = layerTargetProjection ?? projection;
-
-      // Primero generamos un NUEVO GeoJSON reproyectado desde
-      // EPSG:4326 hasta el SRE destino.
-      //
-      // Usamos reprojectGeoJSONData porque necesitamos conservar
-      // el GeoJSON y todas sus propiedades para poder hacer
-      // posteriormente la transformación hacia el visor.
-      const geojsonReprojectado =
-        reprojectGeoJSONData(
-          geojson,
-          "EPSG:4326",
-          destino
-        );
-
-      // OpenLayers necesita que las geometrías utilizadas por
-      // VectorSource estén finalmente en la proyección del View.
-      //
-      // Si el SRE destino ya coincide con el visor, no necesitamos
-      // una segunda transformación.
-      //
-      // Si son diferentes, transformamos el GeoJSON desde el
-      // SRE destino hasta el SRE utilizado por el mapa.
-      const features =
-        destino === projection
-          ? reprojectGeoJSON(
-              geojsonReprojectado,
-              destino,
-              projection
-            )
-          : reprojectGeoJSON(
-              geojsonReprojectado,
-              destino,
-              projection
-            );
-
-      deportivosSource.clear();
-      deportivosSource.addFeatures(features);
-
-      // La capa ahora representa el SRE destino seleccionado.
-      deportivosLayer.set(
-        "layerProjectionCode",
-        destino
-      );
-    };
-
-    // --- Carga inicial de eventos desde Supabase ---
-    supabase
-      .from("eventos")
-      .select("*")
-      .then(
-        ({
-          data,
-          error,
-        }: {
-          data: EventoRow[] | null;
-          error: unknown;
-        }) => {
-          if (error || !data) {
-            console.error("Error cargando eventos de Supabase:", error);
-            return;
-          }
-
-          allEventos = data;
-
-          onLayerProjectionChange(
-            detectLayerProjection(eventosToGeoJSON(allEventos))
-          );
-
-          syncDeportivosSource();
-        }
-      );
-
-    // Revisión periódica: hace que los eventos dinámicos aparezcan o
-    // desaparezcan solos al cruzar su fecha_inicio / fecha_fin.
-    const vigenciaIntervalId = window.setInterval(
-      syncDeportivosSource,
-      INTERVALO_REVISION_VIGENCIA_MS
-    );
+    // --- Capas GeoJSON: se siguen cargando directamente ---
 
     const uploadedLayers = layers.map((layer) => {
       const source = new VectorSource();
@@ -244,45 +286,32 @@ function MapComponent({
       return vectorLayer;
     });
 
-    // --- Suscripción en vivo: refleja INSERT/UPDATE/DELETE de la tabla "eventos" al instante
+    // --- Actualización de teselas mediante Supabase Realtime ---
+
+    const actualizarTeselasEventos = () => {
+      eventosTileSource.refresh();
+    };
+
     const eventosChannel = supabase
       .channel("eventos-live")
       .on(
         "postgres_changes" as any,
         { event: "INSERT", schema: "public", table: "eventos" },
-        (payload: any) => {
-          const nuevo = payload.new as EventoRow;
-          allEventos = [...allEventos, nuevo];
-          syncDeportivosSource();
-        }
+        actualizarTeselasEventos
       )
       .on(
         "postgres_changes" as any,
         { event: "UPDATE", schema: "public", table: "eventos" },
-        (payload: any) => {
-          const actualizado = payload.new as EventoRow;
-
-          allEventos = allEventos.map((row) =>
-            row.id === actualizado.id ? actualizado : row
-          );
-
-          syncDeportivosSource();
-        }
+        actualizarTeselasEventos
       )
       .on(
         "postgres_changes" as any,
         { event: "DELETE", schema: "public", table: "eventos" },
-        (payload: any) => {
-          const eliminado = payload.old as { id: string };
-
-          allEventos = allEventos.filter(
-            (row) => row.id !== eliminado.id
-          );
-
-          syncDeportivosSource();
-        }
+        actualizarTeselasEventos
       )
       .subscribe();
+
+    // --- Capa auxiliar para el punto capturado ---
 
     const captureSource = new VectorSource();
 
@@ -332,6 +361,8 @@ function MapComponent({
       }),
     });
 
+    // --- Ventana emergente ---
+
     const popupElement = document.createElement("div");
     popupElement.className = "map-popup";
 
@@ -346,13 +377,13 @@ function MapComponent({
 
     map.on("singleclick", async (event) => {
       let hitFeature: FeatureLike | null = null;
-      let hitLayer: VectorLayer<VectorSource> | null = null;
+      let hitLayer: BaseLayer | null = null;
 
       map.forEachFeatureAtPixel(
         event.pixel,
         (feature, layer) => {
           hitFeature = feature;
-          hitLayer = layer as VectorLayer<VectorSource> | null;
+          hitLayer = layer ?? null;
           return true;
         },
         {
@@ -360,10 +391,16 @@ function MapComponent({
         }
       );
 
-      if (hitFeature) {
-        const properties = (
-          hitFeature as FeatureLike
-        ).getProperties() as Record<string, unknown>;
+      // Las asignaciones realizadas dentro del callback de OpenLayers
+      // no se reflejan en el análisis de flujo de TypeScript.
+      const selectedFeature = hitFeature as FeatureLike | null;
+      const selectedLayer = hitLayer as BaseLayer | null;
+
+      if (selectedFeature) {
+        const properties = selectedFeature.getProperties() as Record<
+          string,
+          unknown
+        >;
 
         const nombre = properties["nombre"] ?? "Sin nombre";
         const municipio = properties["municipio"] ?? "-";
@@ -397,7 +434,6 @@ function MapComponent({
               ).toLocaleString()}`
             : "";
 
-        // Mostramos primero la información básica del evento.
         popupElement.innerHTML = `
           <div class="map-popup__flyer">
             ${
@@ -424,8 +460,7 @@ function MapComponent({
         popupElement.style.display = "block";
         popup.setPosition(event.coordinate);
 
-        // Si el evento tiene flyer, generamos una URL firmada
-        // porque el bucket "eventos-flyers" es privado.
+        // El bucket es privado: se genera una URL firmada.
         if (flyerPath) {
           const { data: signedUrlData, error: signedUrlError } =
             await supabase.storage
@@ -467,8 +502,8 @@ function MapComponent({
         popupElement.style.display = "none";
       }
 
-      // --- Captura de coordenadas: una sola entrada, en el SRE de la
-      // capa donde cayó el clic (o del mapa base si no hay capa) ---
+      // --- Captura de coordenadas del clic ---
+
       const clicked = event.coordinate as [number, number];
 
       captureSource.clear();
@@ -476,7 +511,7 @@ function MapComponent({
         new Feature(new Point(clicked))
       );
 
-      // Coordenada del clic siempre en EPSG:4326, para el formulario de eventos.
+      // Coordenada en EPSG:4326 para el formulario de eventos.
       if (onPointSelected) {
         const lonLat = transformCoordinate(
           clicked,
@@ -489,14 +524,12 @@ function MapComponent({
 
       if (!onCoordinateCapture) return;
 
-      const layerName = hitLayer
-        ? ((hitLayer as VectorLayer<VectorSource>).get(
-            "layerName"
-          ) as string | undefined)
+      const layerName = selectedLayer
+        ? (selectedLayer.get("layerName") as string | undefined)
         : undefined;
 
-      const layerCode = hitLayer
-        ? ((hitLayer as VectorLayer<VectorSource>).get(
+      const layerCode = selectedLayer
+        ? (selectedLayer.get(
             "layerProjectionCode"
           ) as string | undefined)
         : undefined;
@@ -529,7 +562,7 @@ function MapComponent({
     });
 
     return () => {
-      // 🆕 Guarda dónde estaba mirando el usuario antes de destruir el mapa
+      // Guarda la vista antes de destruir el mapa.
       const currentView = map.getView();
       const center = currentView.getCenter();
 
