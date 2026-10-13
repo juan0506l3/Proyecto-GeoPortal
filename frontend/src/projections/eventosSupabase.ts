@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
+import { normalizarMunicipio } from "./eventoUtils";
 
 export interface EventoRow {
   id: string;
@@ -9,34 +10,32 @@ export interface EventoRow {
   direccion: string | null;
   lng: number;
   lat: number;
-  fecha_inicio: string | null; // ISO string. null => evento estático
-  fecha_fin: string | null;    // ISO string. null => evento estático
+  fecha_inicio: string | null;
+  fecha_fin: string | null;    
   flyer_path: string | null;
+  flyer_url: string | null;    
 }
 
-// Datos que envía el formulario para crear un evento nuevo.
+
 export interface NuevoEvento {
   nombre: string;
   municipio: string | null;
   tipo: string | null;
   categoria: string;
+  direccion: string | null;
+  flyer_url: string | null;
   lng: number;
   lat: number;
   fecha_inicio: string | null;
   fecha_fin: string | null;
 }
 
-/** Un evento es "dinámico" si trae ambas fechas; si no, es estático. */
 export function esEventoDinamico(
   row: Pick<EventoRow, "fecha_inicio" | "fecha_fin">
 ): boolean {
   return Boolean(row.fecha_inicio && row.fecha_fin);
 }
 
-/**
- * Un evento estático siempre está vigente.
- * Un evento dinámico solo está vigente entre fecha_inicio y fecha_fin (inclusive).
- */
 export function esEventoVigente(
   row: Pick<EventoRow, "fecha_inicio" | "fecha_fin">,
   ahora: Date = new Date()
@@ -50,7 +49,6 @@ export function esEventoVigente(
   return now >= inicio && now <= fin;
 }
 
-/** Filtra una lista de eventos dejando solo los que están vigentes ahora. */
 export function filtrarEventosVigentes(
   rows: EventoRow[],
   ahora: Date = new Date()
@@ -67,13 +65,14 @@ export function eventosToGeoJSON(rows: EventoRow[]) {
       properties: {
         id: row.id,
         nombre: row.nombre,
-        municipio: row.municipio,
+        municipio: normalizarMunicipio(row.municipio),
         categoria: row.categoria,
         tipo: row.tipo,
         direccion: row.direccion,
         fecha_inicio: row.fecha_inicio,
         fecha_fin: row.fecha_fin,
         flyer_path: row.flyer_path,
+        flyer_url: row.flyer_url,
         dinamico: esEventoDinamico(row),
       },
       geometry: { type: "Point", coordinates: [row.lng, row.lat] },
@@ -81,17 +80,11 @@ export function eventosToGeoJSON(rows: EventoRow[]) {
   };
 }
 
-/**
- * Inserta un evento nuevo y, si se proporciona un flyer,
- * lo sube al bucket privado "eventos-flyers".
- *
- * La ruta del flyer queda guardada en eventos.flyer_path.
- */
 export async function crearEvento(
   evento: NuevoEvento,
   flyer?: File | null
 ) {
-  // 1. Crear primero el evento para obtener su ID.
+
   const { data: eventoCreado, error: errorEvento } = await supabase
     .from("eventos")
     .insert([evento])
@@ -105,7 +98,7 @@ export async function crearEvento(
     };
   }
 
-  // Si no hay flyer, terminamos aquí.
+
   if (!flyer) {
     return {
       data: eventoCreado,
@@ -113,17 +106,17 @@ export async function crearEvento(
     };
   }
 
-  // 2. Obtener una extensión sencilla para el archivo.
+  
   const nombreArchivo = flyer.name;
   const extension =
     nombreArchivo.includes(".")
       ? nombreArchivo.split(".").pop()?.toLowerCase() ?? "jpg"
       : "jpg";
 
-  // 3. La ruta queda asociada al ID del evento.
+
   const flyerPath = `${eventoCreado.id}.${extension}`;
 
-  // 4. Subir el flyer al bucket privado.
+  
   const { error: errorUpload } = await supabase.storage
     .from("eventos-flyers")
     .upload(flyerPath, flyer, {
@@ -135,7 +128,7 @@ export async function crearEvento(
   if (errorUpload) {
     console.error("Error subiendo flyer:", errorUpload);
 
-    // Evitamos dejar un evento creado sin su flyer.
+  
     await supabase
       .from("eventos")
       .delete()
@@ -147,7 +140,7 @@ export async function crearEvento(
     };
   }
 
-  // 5. Guardar la ruta del flyer en la tabla eventos.
+  
   const { data: eventoActualizado, error: errorUpdate } = await supabase
     .from("eventos")
     .update({
@@ -160,7 +153,6 @@ export async function crearEvento(
   if (errorUpdate || !eventoActualizado) {
     console.error("Error guardando la ruta del flyer:", errorUpdate);
 
-    // Si no pudimos guardar la ruta, eliminamos también el archivo.
     await supabase.storage
       .from("eventos-flyers")
       .remove([flyerPath]);

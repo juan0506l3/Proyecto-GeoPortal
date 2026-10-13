@@ -1,3 +1,4 @@
+import { useState } from "react";
 import CoordinateCapture from "./CoordinateCapture";
 import EventForm from "./EventForm";
 import GeoJSONUploader from "./GeoJSONUploader";
@@ -14,10 +15,8 @@ import "./Sidebar.css";
 interface SidebarProps {
   capturedPoint: CapturedPoint | null;
 
-  // Coordenada del clic en el mapa en EPSG:4326, para el formulario de eventos.
   selectedPoint: { lng: number; lat: number } | null;
 
-  // Indica si el usuario autenticado es administrador.
   isAdmin: boolean;
 
   onFileLoaded: (data: unknown, fileName: string) => void;
@@ -58,8 +57,30 @@ function Sidebar({
   onTargetProjectionChange,
   onReproject,
 }: SidebarProps) {
+  const [colapsado, setColapsado] = useState(false);
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${colapsado ? " sidebar--collapsed" : ""}`}>
+      <button
+        type="button"
+        className="sidebar__toggle"
+        onClick={() => setColapsado((previo) => !previo)}
+        aria-expanded={!colapsado}
+        aria-label={colapsado ? "Mostrar panel" : "Ocultar panel"}
+        title={colapsado ? "Mostrar panel" : "Ocultar panel"}
+      >
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path
+            d="M9 6l6 6-6 6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
       <div className="sidebar__scroll">
         <CoordinateCapture point={capturedPoint} />
 
