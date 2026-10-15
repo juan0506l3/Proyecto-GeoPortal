@@ -180,12 +180,20 @@ function createEventCategoryStyle(activeCategories: Set<string>) {
 function MapComponent({
   projection,
   layers,
+  layerTargetProjection,
   activeCategories,
   onLayerProjectionChange,
   onCoordinateCapture,
   onPointSelected,
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
+
+  const eventosLayerRef = useRef<VectorTileLayer | null>(null);
+  const layerTargetProjectionRef = useRef<string | null>(
+    layerTargetProjection ?? null
+  );
+
+  layerTargetProjectionRef.current = layerTargetProjection ?? null;
 
   const [baseMap, setBaseMap] = useState<BaseMapId>("hybrid");
   const [satelliteFailed, setSatelliteFailed] = useState(false);
@@ -302,9 +310,27 @@ function MapComponent({
     });
 
     deportivosLayer.set("layerName", "Eventos (Supabase)");
-    deportivosLayer.set("layerProjectionCode", "EPSG:4326");
 
-    onLayerProjectionChange(detectLayerProjection(eventosToGeoJSON([])));
+    eventosLayerRef.current = deportivosLayer;
+
+    const detectedProjection = detectLayerProjection(
+      eventosToGeoJSON([])
+    );
+
+    const activeLayerProjection = layerTargetProjectionRef.current
+      ? {
+          ...detectedProjection,
+          code: layerTargetProjectionRef.current,
+          source: "declarado" as const,
+        }
+      : detectedProjection;
+
+    deportivosLayer.set(
+      "layerProjectionCode",
+      activeLayerProjection.code
+    );
+
+    onLayerProjectionChange(activeLayerProjection);
 
     // Reevalúa estilos para que los eventos dinámicos aparezcan o
     // desaparezcan solos al cruzar fecha_inicio / fecha_fin.
@@ -689,6 +715,31 @@ function MapComponent({
     onCoordinateCapture,
     onPointSelected,
   ]);
+
+  useEffect(() => {
+    if (!layerTargetProjection) return;
+
+    const eventosLayer = eventosLayerRef.current;
+
+    if (!eventosLayer) return;
+
+    eventosLayer.set(
+      "layerProjectionCode",
+      layerTargetProjection
+    );
+
+    eventosLayer.changed();
+
+    const detectedProjection = detectLayerProjection(
+      eventosToGeoJSON([])
+    );
+
+    onLayerProjectionChange({
+      ...detectedProjection,
+      code: layerTargetProjection,
+      source: "declarado",
+    });
+  }, [layerTargetProjection, onLayerProjectionChange]);
 
   useEffect(() => {
     baseMapRef.current = baseMap;
