@@ -40,6 +40,7 @@ import type { LayerProjectionInfo } from "../projections/detectLayerProjection";
 import type { GeoJSONLayer } from "../projections/layers";
 
 import { transformCoordinate } from "../projections/transform";
+import { createPolygonStyle, isPolygon } from "../projections/polygonStyle";
 import {
   getProjectionLabel,
   isGeographic,
@@ -146,8 +147,6 @@ function createCategoryStyle(activeCategories: Set<string>) {
   };
 }
 
-// Conserva el filtro por categoría y oculta los eventos dinámicos
-// que estén fuera de su periodo de vigencia.
 function createEventCategoryStyle(activeCategories: Set<string>) {
   const categoryStyle = createCategoryStyle(activeCategories);
 
@@ -209,8 +208,6 @@ function MapComponent({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // --- Capa de eventos mediante teselas vectoriales (PostGIS → MVT) ---
-
     const eventosTileSource = new VectorTileSource({
       format: new MVT(),
       projection: "EPSG:3857",
@@ -237,7 +234,6 @@ function MapComponent({
           return undefined;
         }
 
-        // Normaliza X para el desplazamiento horizontal del mapa.
         const xyzX = ((x % limite) + limite) % limite;
 
         return `${z}/${xyzX}/${y}`;
@@ -332,21 +328,21 @@ function MapComponent({
 
     onLayerProjectionChange(activeLayerProjection);
 
-    // Reevalúa estilos para que los eventos dinámicos aparezcan o
-    // desaparezcan solos al cruzar fecha_inicio / fecha_fin.
     const vigenciaIntervalId = window.setInterval(() => {
       deportivosLayer.changed();
     }, INTERVALO_REVISION_VIGENCIA_MS);
 
-    // --- Capas GeoJSON cargadas por el usuario ---
-
-    const uploadedLayers = layers.map((layer) => {
+    const uploadedLayers = layers.map((layer, index) => {
       const source = new VectorSource();
+
+      const pointStyle = createCategoryStyle(activeCategories);
+      const polygonStyle = createPolygonStyle(index);
 
       const vectorLayer = new VectorLayer({
         source,
         visible: layer.visible,
-        style: createCategoryStyle(activeCategories),
+        style: (feature: FeatureLike) =>
+          isPolygon(feature) ? polygonStyle(feature) : pointStyle(feature),
       });
 
       const sourceProjection = layer.projection.code;
@@ -364,8 +360,6 @@ function MapComponent({
 
       return vectorLayer;
     });
-
-    // --- Realtime: refresca las teselas ante cualquier cambio ---
 
     const actualizarTeselasEventos = () => {
       eventosTileSource.refresh();
@@ -389,8 +383,6 @@ function MapComponent({
         actualizarTeselasEventos
       )
       .subscribe();
-
-    // --- Capa auxiliar para el punto capturado ---
 
     const captureSource = new VectorSource();
 
@@ -422,8 +414,6 @@ function MapComponent({
 
     const initialZoom = saved ? saved.zoom : 12;
 
-    // --- Mapas base ---
-
     const osmLayer = new TileLayer({
       source: new OSM(),
       visible: false,
@@ -442,7 +432,6 @@ function MapComponent({
     applyBaseMap(baseLayers, baseMapRef.current);
     baseLayersRef.current = baseLayers;
 
-    // Si el satélite falla repetidamente, vuelve a OpenStreetMap.
     const satelliteSource = satelliteLayer.getSource() as XYZ;
     let consecutiveErrors = 0;
 
@@ -469,8 +458,8 @@ function MapComponent({
         satelliteLayer,
         placesLayer,
         roadsLayer,
-        deportivosLayer,
         ...uploadedLayers,
+        deportivosLayer,
         captureLayer,
       ],
       view: new View({
@@ -482,8 +471,6 @@ function MapComponent({
 
     const resizeObserver = new ResizeObserver(() => map.updateSize());
     resizeObserver.observe(mapRef.current);
-
-    // --- Ventana emergente ---
 
     const popupElement = document.createElement("div");
     popupElement.className = "map-popup";
@@ -604,7 +591,6 @@ function MapComponent({
         popupElement.style.display = "block";
         popup.setPosition(event.coordinate);
 
-        // El bucket es privado: se genera una URL firmada.
         if (flyerPath) {
           const { data: signedUrlData, error: signedUrlError } =
             await supabase.storage
@@ -640,8 +626,6 @@ function MapComponent({
       } else {
         popupElement.style.display = "none";
       }
-
-      // --- Captura de coordenadas del clic ---
 
       const clicked = event.coordinate as [number, number];
 
