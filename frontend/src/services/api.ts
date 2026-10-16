@@ -11,7 +11,11 @@ export async function comprobarConexionAPI(): Promise<HealthResponse> {
     throw new Error("Falta configurar la variable VITE_API_URL.");
   }
 
-  const response = await fetch(`${API_URL}/api/health`);
+  const response = await fetch(`${API_URL}/api/health`, {
+    headers: {
+      "ngrok-skip-browser-warning": "true",
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`Error del backend: HTTP ${response.status}`);
