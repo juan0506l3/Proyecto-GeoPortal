@@ -10,7 +10,14 @@ import { EVENT_CATEGORIES } from "./projections/eventCategories";
 import { supabase } from "./lib/supabaseClient";
 import "./App.css";
 //-------------------------------------------------------
-import { comprobarConexionAPI } from "./services/api";
+
+import {
+  comprobarConexionAPI,
+  ejecutarClip,
+} from "./services/api";
+
+import { reprojectGeoJSONData } from "./projections/reproject";
+
 //-------------------------------------------------------
 function App() {
   // SRE del visor
@@ -180,7 +187,60 @@ function App() {
       newLayer,
     ]);
   };
+//------------------------
+  const handleClip = async (
+    inputLayerId: string,
+    maskLayerId: string
+  ) => {
+    const inputLayer = layers.find(
+      (layer) => layer.id === inputLayerId
+    );
 
+    const maskLayer = layers.find(
+      (layer) => layer.id === maskLayerId
+    );
+
+    if (!inputLayer || !maskLayer) {
+      throw new Error("No se encontraron las capas seleccionadas.");
+    }
+
+    if (inputLayer.id === maskLayer.id) {
+      throw new Error(
+        "La capa de entrada y la máscara deben ser diferentes."
+      );
+    }
+
+    // Normalizar ambas capas a coordenadas geográficas EPSG:4326.
+    const input4326 = reprojectGeoJSONData(
+      inputLayer.data,
+      inputLayer.projection.code,
+      "EPSG:4326"
+    );
+
+    const mask4326 = reprojectGeoJSONData(
+      maskLayer.data,
+      maskLayer.projection.code,
+      "EPSG:4326"
+    );
+
+    // Ejecutar el recorte en el backend con GDAL.
+    const resultado = await ejecutarClip(input4326, mask4326);
+
+    // Registrar el resultado como una capa independiente.
+    const nuevaCapa: GeoJSONLayer = {
+      id: crypto.randomUUID(),
+      name: `Clip - ${inputLayer.name}`,
+      data: resultado,
+      visible: true,
+      projection: detectLayerProjection(resultado),
+    };
+
+    setLayers((capasAnteriores) => [
+      ...capasAnteriores,
+      nuevaCapa,
+    ]);
+  };
+//-------------------------
   const handleLayerVisibilityChange = (
     id: string,
     visible: boolean
@@ -299,6 +359,7 @@ function App() {
           targetProjection={targetProjection}
           onTargetProjectionChange={setTargetProjection}
           onReproject={handleReproject}
+          onClip={handleClip}
         />
       </div>
 
