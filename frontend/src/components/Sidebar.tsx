@@ -2,6 +2,7 @@ import { useState } from "react";
 import CoordinateCapture from "./CoordinateCapture";
 import EventForm from "./EventForm";
 import GeoJSONUploader from "./GeoJSONUploader";
+import JoinResultLayer from "./JoinResultLayer";
 import EventFilter from "./EventFilter";
 import LayerList from "./LayerList";
 import ProjectionSelector from "./ProjectionSelector";
@@ -89,6 +90,7 @@ function Sidebar({
         )}
 
         <GeoJSONUploader onFileLoaded={onFileLoaded} />
+        <JoinResultLayer onFileLoaded={onFileLoaded} />
 
         <EventFilter
           activeCategories={activeCategories}

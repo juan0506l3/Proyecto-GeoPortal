@@ -4,7 +4,6 @@ import Stroke from "ol/style/Stroke";
 import Text from "ol/style/Text";
 import type { FeatureLike } from "ol/Feature";
 
-// Un color distinto por capa cargada (se reparte por índice)
 const POLYGON_COLORS = [
   "#1e88e5",
   "#fb8c00",
@@ -35,7 +34,10 @@ export function createPolygonStyle(layerIndex: number) {
 
   return (feature: FeatureLike) => {
     const properties = feature.getProperties();
-    const label = properties["nombre"] ?? properties["municipio"];
+    const baseLabel = properties["nombre"] ?? properties["municipio"];
+    const total = properties["total_eventos"];
+    const label =
+      baseLabel && total !== undefined ? `${baseLabel} (${total})` : baseLabel;
 
     return new Style({
       fill,
