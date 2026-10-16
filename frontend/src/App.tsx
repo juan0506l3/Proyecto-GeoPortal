@@ -9,7 +9,9 @@ import { detectLayerProjection } from "./projections/detectLayerProjection";
 import { EVENT_CATEGORIES } from "./projections/eventCategories";
 import { supabase } from "./lib/supabaseClient";
 import "./App.css";
-
+//-------------------------------------------------------
+import { comprobarConexionAPI } from "./services/api";
+//-------------------------------------------------------
 function App() {
   // SRE del visor
   const [projection, setProjection] =
@@ -54,7 +56,26 @@ function App() {
 
   // Controla la ventana de inicio de sesión
   const [mostrarLogin, setMostrarLogin] = useState(false);
+//---------------------------------------------------------------
+  const [estadoAPI, setEstadoAPI] = useState("Sin comprobar");
 
+  const probarConexionAPI = async () => {
+    setEstadoAPI("Conectando...");
+
+    try {
+      const resultado = await comprobarConexionAPI();
+      setEstadoAPI(`Conectado: ${resultado.message}`);
+    } catch (error) {
+      const mensaje =
+        error instanceof Error
+          ? error.message
+          : "Error desconocido";
+
+      setEstadoAPI(`Error: ${mensaje}`);
+      console.error("Error al conectar con el backend:", error);
+    }
+  };
+//----------------------------------------------------------------
   const comprobarAdministrador = useCallback(async () => {
     const {
       data: { session },
@@ -210,6 +231,15 @@ function App() {
         <h1>GeoPortal</h1>
 
         <div className="app-layout__auth">
+          <button
+            type="button"
+            className="app-layout__auth-button"
+            onClick={probarConexionAPI}
+          >
+            Probar conexión API
+          </button>
+
+          <span>{estadoAPI}</span>
           {esAdmin ? (
             <button
               type="button"
