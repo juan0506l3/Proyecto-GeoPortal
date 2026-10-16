@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import CoordinateCapture from "./CoordinateCapture";
 import EventForm from "./EventForm";
@@ -14,29 +15,22 @@ import "./Sidebar.css";
 
 interface SidebarProps {
   capturedPoint: CapturedPoint | null;
-
   selectedPoint: { lng: number; lat: number } | null;
-
   isAdmin: boolean;
-
   onFileLoaded: (data: unknown, fileName: string) => void;
-
   activeCategories: Set<string>;
   onToggleCategory: (categoryId: string) => void;
-
   layers: GeoJSONLayer[];
   onLayerVisibilityChange: (id: string, visible: boolean) => void;
   onLayerDelete: (id: string) => void;
   onLayerDownload: (id: string) => void;
-
   projection: string;
   onProjectionChange: (projection: string) => void;
-
   layerProjection: LayerProjectionInfo | null;
-
   targetProjection: string;
   onTargetProjectionChange: (projection: string) => void;
   onReproject: () => void;
+  onClip: (inputLayerId: string, maskLayerId: string) => Promise<void>;
 }
 
 function Sidebar({
@@ -56,8 +50,43 @@ function Sidebar({
   targetProjection,
   onTargetProjectionChange,
   onReproject,
+  onClip,
 }: SidebarProps) {
   const [colapsado, setColapsado] = useState(false);
+  const [capaEntradaId, setCapaEntradaId] = useState("");
+  const [capaMascaraId, setCapaMascaraId] = useState("");
+  const [procesandoClip, setProcesandoClip] = useState(false);
+  const [errorClip, setErrorClip] = useState("");
+
+  const capaEntradaSeleccionada = capaEntradaId || layers[0]?.id || "";
+  const capaMascaraSeleccionada =
+    capaMascaraId || layers[1]?.id || "";
+
+  const ejecutarClipDesdePanel = async () => {
+    if (
+      !capaEntradaSeleccionada ||
+      !capaMascaraSeleccionada ||
+      capaEntradaSeleccionada === capaMascaraSeleccionada
+    ) {
+      setErrorClip("Selecciona dos capas diferentes.");
+      return;
+    }
+
+    setProcesandoClip(true);
+    setErrorClip("");
+
+    try {
+      await onClip(capaEntradaSeleccionada, capaMascaraSeleccionada);
+    } catch (error) {
+      setErrorClip(
+        error instanceof Error
+          ? error.message
+          : "No se pudo ejecutar Clip."
+      );
+    } finally {
+      setProcesandoClip(false);
+    }
+  };
 
   return (
     <aside className={`sidebar${colapsado ? " sidebar--collapsed" : ""}`}>
@@ -84,9 +113,7 @@ function Sidebar({
       <div className="sidebar__scroll">
         <CoordinateCapture point={capturedPoint} />
 
-        {isAdmin && (
-          <EventForm coordinates={selectedPoint} />
-        )}
+        {isAdmin && <EventForm coordinates={selectedPoint} />}
 
         <GeoJSONUploader onFileLoaded={onFileLoaded} />
 
@@ -101,6 +128,94 @@ function Sidebar({
           onDelete={onLayerDelete}
           onDownload={onLayerDownload}
         />
+
+        <section
+          style={{
+            padding: "14px",
+            background: "#ffffff",
+            border: "1px solid var(--gp-border)",
+            borderRadius: "8px",
+          }}
+        >
+          <h3 style={{ margin: "0 0 12px", fontSize: "16px" }}>
+            Clip (recorte geográfico)
+          </h3>
+
+          <label
+            htmlFor="clip-entrada"
+            style={{ display: "block", marginBottom: "6px" }}
+          >
+            Capa de entrada
+          </label>
+
+          <select
+            id="clip-entrada"
+            value={capaEntradaSeleccionada}
+            onChange={(event) => setCapaEntradaId(event.target.value)}
+            disabled={layers.length < 2 || procesandoClip}
+            style={{ width: "100%", padding: "8px", marginBottom: "12px" }}
+          >
+            {layers.map((layer) => (
+              <option key={layer.id} value={layer.id}>
+                {layer.name}
+              </option>
+            ))}
+          </select>
+
+          <label
+            htmlFor="clip-mascara"
+            style={{ display: "block", marginBottom: "6px" }}
+          >
+            Polígono de máscara
+          </label>
+
+          <select
+            id="clip-mascara"
+            value={capaMascaraSeleccionada}
+            onChange={(event) => setCapaMascaraId(event.target.value)}
+            disabled={layers.length < 2 || procesandoClip}
+            style={{ width: "100%", padding: "8px", marginBottom: "12px" }}
+          >
+            {layers.map((layer) => (
+              <option key={layer.id} value={layer.id}>
+                {layer.name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={ejecutarClipDesdePanel}
+            disabled={layers.length < 2 || procesandoClip}
+            style={{
+              width: "100%",
+              padding: "10px",
+              color: "#ffffff",
+              background: "var(--gp-primary)",
+              border: "none",
+              borderRadius: "6px",
+              cursor:
+                layers.length < 2 || procesandoClip
+                  ? "not-allowed"
+                  : "pointer",
+              opacity: layers.length < 2 || procesandoClip ? 0.6 : 1,
+            }}
+          >
+            {procesandoClip ? "Procesando..." : "Ejecutar Clip"}
+          </button>
+
+          {layers.length < 2 && (
+            <p style={{ fontSize: "13px", color: "var(--gp-muted)" }}>
+              Carga al menos dos capas GeoJSON para comenzar.
+            </p>
+          )}
+
+          {errorClip && (
+            <p role="alert" style={{ color: "var(--gp-danger)", fontSize: "13px" }}>
+              {errorClip}
+            </p>
+          )}
+        </section>
 
         <ProjectionSelector
           projection={projection}
