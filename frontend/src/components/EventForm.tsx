@@ -8,6 +8,8 @@ import {
   normalizarMunicipio,
   normalizarUrl,
 } from "../projections/eventoUtils";
+import EventSchedule from "./EventSchedule";
+import type { Horario } from "./EventSchedule";
 import "./EventForm.css";
 
 interface EventFormProps {
@@ -29,8 +31,11 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
   const [lat, setLat] = useState("");
 
   const [esDinamico, setEsDinamico] = useState(false);
-  const [fechaInicio, setFechaInicio] = useState("");
-  const [fechaFin, setFechaFin] = useState("");
+  const [horario, setHorario] = useState<Horario>({
+    inicio: null,
+    fin: null,
+  });
+  const [horarioKey, setHorarioKey] = useState(0);
 
   const [flyer, setFlyer] = useState<File | null>(null);
   const [flyerPreview, setFlyerPreview] = useState<string | null>(null);
@@ -112,8 +117,7 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
     setFlyerUrl("");
     setTipo("");
     setEsDinamico(false);
-    setFechaInicio("");
-    setFechaFin("");
+    setHorarioKey((k) => k + 1);
     eliminarFlyer();
   };
 
@@ -163,27 +167,16 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
     let fechaFinIso: string | null = null;
 
     if (esDinamico) {
-      if (!fechaInicio || !fechaFin) {
+      if (!horario.inicio || !horario.fin) {
         setMensaje({
           tipo: "error",
-          texto: "Ingresa la fecha y hora de inicio y de fin del evento.",
+          texto: "Revisa el día, la hora y la duración del evento.",
         });
         return;
       }
 
-      fechaInicioIso = new Date(fechaInicio).toISOString();
-      fechaFinIso = new Date(fechaFin).toISOString();
-
-      if (
-        new Date(fechaFinIso).getTime() <
-        new Date(fechaInicioIso).getTime()
-      ) {
-        setMensaje({
-          tipo: "error",
-          texto: "La fecha de fin no puede ser anterior a la fecha de inicio.",
-        });
-        return;
-      }
+      fechaInicioIso = horario.inicio;
+      fechaFinIso = horario.fin;
     }
 
     const nuevoEvento: NuevoEvento = {
@@ -459,27 +452,7 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
           </fieldset>
 
           {esDinamico && (
-            <div className="event-form__fechas">
-              <label className="event-form__field">
-                <span>Fecha y hora de inicio</span>
-                <input
-                  type="datetime-local"
-                  value={fechaInicio}
-                  onChange={(e) => setFechaInicio(e.target.value)}
-                  required={esDinamico}
-                />
-              </label>
-
-              <label className="event-form__field">
-                <span>Fecha y hora de fin</span>
-                <input
-                  type="datetime-local"
-                  value={fechaFin}
-                  onChange={(e) => setFechaFin(e.target.value)}
-                  required={esDinamico}
-                />
-              </label>
-            </div>
+            <EventSchedule key={horarioKey} onChange={setHorario} />
           )}
 
           {mensaje && (
