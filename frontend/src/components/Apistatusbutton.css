@@ -1,0 +1,124 @@
+
+.api-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  
+    padding: 8px 14px;
+  
+    border: 1px solid #d7e1ea;
+    border-radius: 999px;
+  
+    background: #ffffff;
+    color: #205295;
+  
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  
+    box-shadow: 0 1px 2px rgba(23, 38, 61, 0.06);
+  
+    cursor: pointer;
+  
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.15s ease;
+  }
+  
+  .api-status:hover:not(:disabled) {
+    border-color: #205295;
+    background: #f1f6fc;
+    box-shadow: 0 3px 8px rgba(32, 82, 149, 0.14);
+    transform: translateY(-1px);
+  }
+  
+  .api-status:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  
+  .api-status:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px #e8f0fa;
+    border-color: #205295;
+  }
+  
+  .api-status:disabled {
+    cursor: progress;
+    opacity: 0.85;
+  }
+  
+  /* Punto de estado: ámbar = sin conectar / sin comprobar */
+  
+  .api-status__dot {
+    width: 9px;
+    height: 9px;
+  
+    border-radius: 50%;
+  
+    background: #e0a100;
+    box-shadow: 0 0 0 0 rgba(224, 161, 0, 0.5);
+  
+    animation: api-status-pulse 1.8s ease-out infinite;
+  }
+  
+  /* Rojo cuando el intento de conexión falló */
+  
+  .api-status--error {
+    border-color: #f0c4be;
+    color: #c0392b;
+  }
+  
+  .api-status--error:hover:not(:disabled) {
+    border-color: #c0392b;
+    background: #fdf3f2;
+    box-shadow: 0 3px 8px rgba(192, 57, 43, 0.14);
+  }
+  
+  .api-status--error .api-status__dot {
+    background: #c0392b;
+    box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.5);
+    animation-name: api-status-pulse-error;
+  }
+  
+  /* Spinner mientras se comprueba */
+  
+  .api-status__spinner {
+    width: 12px;
+    height: 12px;
+  
+    border: 2px solid #c7d6ea;
+    border-top-color: #205295;
+    border-radius: 50%;
+  
+    animation: api-status-spin 0.7s linear infinite;
+  }
+  
+  @keyframes api-status-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  @keyframes api-status-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(224, 161, 0, 0.5);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 7px rgba(224, 161, 0, 0);
+    }
+  }
+  
+  @keyframes api-status-pulse-error {
+    0% {
+      box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.5);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 7px rgba(192, 57, 43, 0);
+    }
+  }
