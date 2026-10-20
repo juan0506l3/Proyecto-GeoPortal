@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import MapComponent from "./components/Map";
 import Sidebar from "./components/Sidebar";
 import AdminLogin from "./components/AdminLogin";
+import ApiStatusButton from "./components/Apistatusbutton";
+import LoginButton from "./components/Loginbutton";
 import type { LayerProjectionInfo } from "./projections/detectLayerProjection";
 import type { CapturedPoint } from "./projections/types";
 import type { GeoJSONLayer } from "./projections/layers";
@@ -11,10 +13,7 @@ import { supabase } from "./lib/supabaseClient";
 import "./App.css";
 //-------------------------------------------------------
 
-import {
-  comprobarConexionAPI,
-  ejecutarClip,
-} from "./services/api";
+import { ejecutarClip } from "./services/api";
 
 import { reprojectGeoJSONData } from "./projections/reproject";
 
@@ -63,26 +62,6 @@ function App() {
 
   // Controla la ventana de inicio de sesión
   const [mostrarLogin, setMostrarLogin] = useState(false);
-//---------------------------------------------------------------
-  const [estadoAPI, setEstadoAPI] = useState("Sin comprobar");
-
-  const probarConexionAPI = async () => {
-    setEstadoAPI("Conectando...");
-
-    try {
-      const resultado = await comprobarConexionAPI();
-      setEstadoAPI(`Conectado: ${resultado.message}`);
-    } catch (error) {
-      const mensaje =
-        error instanceof Error
-          ? error.message
-          : "Error desconocido";
-
-      setEstadoAPI(`Error: ${mensaje}`);
-      console.error("Error al conectar con el backend:", error);
-    }
-  };
-//----------------------------------------------------------------
   const comprobarAdministrador = useCallback(async () => {
     const {
       data: { session },
@@ -291,15 +270,9 @@ function App() {
         <h1>GeoPortal</h1>
 
         <div className="app-layout__auth">
-          <button
-            type="button"
-            className="app-layout__auth-button"
-            onClick={probarConexionAPI}
-          >
-            Probar conexión API
-          </button>
+          {/* Solo aparece cuando la API no está conectada */}
+          <ApiStatusButton />
 
-          <span>{estadoAPI}</span>
           {esAdmin ? (
             <button
               type="button"
@@ -309,13 +282,7 @@ function App() {
               Cerrar sesión
             </button>
           ) : (
-            <button
-              type="button"
-              className="app-layout__auth-button"
-              onClick={() => setMostrarLogin(true)}
-            >
-              🔐 Iniciar sesión
-            </button>
+            <LoginButton onClick={() => setMostrarLogin(true)} />
           )}
         </div>
       </header>

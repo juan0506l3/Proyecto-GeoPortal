@@ -1,32 +1,34 @@
 import { useEffect, useRef, useState } from "react";
+import { comprobarConexionAPI } from "../services/api";
 import "./ApiStatusButton.css";
 
 interface ApiStatusButtonProps {
+
   onCheck?: () => Promise<boolean>;
 
   intervalMs?: number;
 }
 
-const API_URL: string =
-  import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+const TIEMPO_MAXIMO_MS = 8000;
 
 async function comprobarApi(): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 5000);
+  let temporizador: number | undefined;
+
+  const limite = new Promise<never>((_, reject) => {
+    temporizador = window.setTimeout(
+      () => reject(new Error("La API tardó demasiado en responder.")),
+      TIEMPO_MAXIMO_MS
+    );
+  });
 
   try {
-    const respuesta = await fetch(`${API_URL}/api/health`, {
-      signal: controller.signal,
-    });
-
-    if (!respuesta.ok) return false;
-
-    const datos = await respuesta.json();
-    return datos?.status === "ok";
-  } catch {
+    const respuesta = await Promise.race([comprobarConexionAPI(), limite]);
+    return respuesta.status === "ok";
+  } catch (error) {
+    console.error("Error al conectar con el backend:", error);
     return false;
   } finally {
-    window.clearTimeout(timer);
+    window.clearTimeout(temporizador);
   }
 }
 
@@ -39,14 +41,14 @@ function ApiStatusButton({
   const [estado, setEstado] = useState<Estado>("verificando");
   const [fallo, setFallo] = useState(false);
 
-
+  // Siempre usamos la versión más reciente de onCheck sin reiniciar el intervalo
   const checkRef = useRef<() => Promise<boolean>>(comprobarApi);
 
   useEffect(() => {
     checkRef.current = onCheck ?? comprobarApi;
   }, [onCheck]);
 
-
+  // Comprobación automática: al cargar y cada cierto tiempo
   useEffect(() => {
     let activo = true;
 
@@ -78,6 +80,7 @@ function ApiStatusButton({
     setEstado(ok ? "conectado" : "desconectado");
   };
 
+  // Conectada (o aún verificando en silencio): no se muestra nada
   if (estado === "conectado" || estado === "verificando") return null;
 
   const comprobando = estado === "comprobando";

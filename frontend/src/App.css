@@ -34,6 +34,9 @@
 
 .app-layout__auth {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .app-layout__auth-button {
@@ -62,4 +65,3 @@
   border-color: #205295;
   color: #163d70;
 }
-
