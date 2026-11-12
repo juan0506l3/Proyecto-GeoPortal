@@ -1,185 +1,269 @@
-
 .event-schedule {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  
-    padding: 12px;
-  
-    border: 1px solid var(--gp-border);
-    border-radius: 10px;
-  
-    background: var(--gp-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  padding: 14px;
+
+  border: 1px solid var(--gp-border);
+  border-radius: 10px;
+
+  background: var(--gp-surface);
+}
+
+.event-schedule__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gp-ink);
+}
+
+.event-schedule__group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.event-schedule__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gp-muted);
+}
+
+/* ───── Campos de texto y lista ───── */
+
+.event-schedule__input,
+.event-schedule__select {
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 9px 11px;
+
+  border: 1px solid var(--gp-border);
+  border-radius: 8px;
+
+  background: var(--gp-surface-alt);
+  color: var(--gp-ink);
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.event-schedule__input::placeholder {
+  color: var(--gp-muted);
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.event-schedule__input:focus,
+.event-schedule__select:focus {
+  outline: none;
+  border-color: var(--gp-primary);
+  background: var(--gp-surface);
+}
+
+.event-schedule__input--error,
+.event-schedule__input--error:focus {
+  border-color: var(--gp-danger);
+}
+
+/* ───── Hora: dígitos grandes + a. m. / p. m. ───── */
+
+.event-schedule__time {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.event-schedule__digits {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.event-schedule__digit {
+  min-width: 52px;
+  padding: 6px 10px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: var(--gp-surface-alt);
+  color: var(--gp-ink);
+
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.event-schedule__digit:hover {
+  background: var(--gp-primary-soft);
+}
+
+.event-schedule__digit--active,
+.event-schedule__digit--active:hover {
+  background: var(--gp-primary-soft);
+  color: var(--gp-primary);
+}
+
+.event-schedule__colon {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--gp-muted);
+}
+
+.event-schedule__ampm {
+  display: inline-flex;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  border: 1px solid var(--gp-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.event-schedule__ampm button {
+  padding: 6px 12px;
+
+  border: none;
+
+  background: var(--gp-surface);
+  color: var(--gp-muted);
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.event-schedule__ampm button + button {
+  border-top: 1px solid var(--gp-border);
+}
+
+.event-schedule__ampm .event-schedule__ampm--active {
+  background: var(--gp-primary);
+  color: #ffffff;
+}
+
+/* ───── Reloj circular ───── */
+
+.event-schedule__dial-wrap {
+  display: flex;
+  justify-content: center;
+
+  padding: 6px 0 2px;
+
+  animation: event-schedule-dial-in 0.18s ease-out;
+}
+
+@keyframes event-schedule-dial-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
   }
-  
-  .event-schedule__title {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--gp-ink);
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
-  
-  .event-schedule__group {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-  }
-  
-  .event-schedule__label {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--gp-muted);
-  }
-  
-  .event-schedule__chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  
-  .event-schedule__chip {
-    padding: 6px 11px;
-  
-    border: 1px solid var(--gp-border);
-    border-radius: 999px;
-  
-    background: var(--gp-surface);
-    color: var(--gp-ink);
-  
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 600;
-  
-    cursor: pointer;
-  
-    transition:
-      background 0.15s ease,
-      border-color 0.15s ease,
-      color 0.15s ease;
-  }
-  
-  .event-schedule__chip:hover {
-    border-color: var(--gp-primary);
-    background: var(--gp-primary-soft);
-  }
-  
-  .event-schedule__chip--active,
-  .event-schedule__chip--active:hover {
-    border-color: var(--gp-primary);
-    background: var(--gp-primary);
-    color: #ffffff;
-  }
-  
-  .event-schedule__input,
-  .event-schedule__select {
-    width: 100%;
-    box-sizing: border-box;
-  
-    padding: 8px 10px;
-  
-    border: 1px solid var(--gp-border);
-    border-radius: 6px;
-  
-    background: var(--gp-surface-alt);
-    color: var(--gp-ink);
-  
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 400;
-  }
-  
-  .event-schedule__input:focus,
-  .event-schedule__select:focus {
-    outline: none;
-    border-color: var(--gp-primary);
-    background: var(--gp-surface);
-  }
-  
-  .event-schedule__time {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  
-  .event-schedule__time .event-schedule__select {
-    flex: 1;
-    min-width: 0;
-  }
-  
-  .event-schedule__colon {
-    font-weight: 700;
-    color: var(--gp-muted);
-  }
-  
-  .event-schedule__ampm {
-    display: inline-flex;
-    flex-shrink: 0;
-  
-    border: 1px solid var(--gp-border);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  
-  .event-schedule__ampm button {
-    padding: 8px 11px;
-  
-    border: none;
-  
-    background: var(--gp-surface);
-    color: var(--gp-ink);
-  
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 600;
-  
-    cursor: pointer;
-  }
-  
-  .event-schedule__ampm button + button {
-    border-left: 1px solid var(--gp-border);
-  }
-  
-  .event-schedule__ampm .event-schedule__ampm--active {
-    background: var(--gp-primary);
-    color: #ffffff;
-  }
-  
-  .event-schedule__end-date {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--gp-muted);
-  }
-  
-  .event-schedule__summary {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  
-    padding: 10px 12px;
-  
-    border-radius: 8px;
-  
-    background: var(--gp-primary-soft);
-    color: var(--gp-primary-dark);
-  
-    font-size: 12px;
-    line-height: 1.4;
-  }
-  
-  .event-schedule__error {
-    margin: 0;
-    padding: 8px 10px;
-  
-    border-radius: 6px;
-  
-    background: var(--gp-danger-soft);
-    color: var(--gp-danger);
-  
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1.4;
-  }
+}
+
+.event-schedule__dial {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+
+  outline: none;
+}
+
+.event-schedule__dial-face {
+  fill: var(--gp-surface-alt);
+  stroke: var(--gp-border);
+  stroke-width: 1;
+}
+
+.event-schedule__dial:focus-visible .event-schedule__dial-face {
+  stroke: var(--gp-primary);
+  stroke-width: 2;
+}
+
+.event-schedule__dial-hand {
+  stroke: var(--gp-primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.event-schedule__dial-pivot {
+  fill: var(--gp-primary);
+}
+
+.event-schedule__dial-num {
+  fill: var(--gp-ink);
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.event-schedule__dial-ball {
+  fill: var(--gp-primary);
+  filter: drop-shadow(0 2px 3px rgba(23, 38, 61, 0.3));
+}
+
+.event-schedule__dial-ball-num {
+  fill: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* ───── Resumen y error ───── */
+
+.event-schedule__summary {
+  margin: 0;
+
+  color: var(--gp-muted);
+
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.event-schedule__summary strong {
+  color: var(--gp-ink);
+  font-weight: 600;
+}
+
+.event-schedule__error {
+  margin: 0;
+  padding: 8px 10px;
+
+  border-radius: 6px;
+
+  background: var(--gp-danger-soft);
+  color: var(--gp-danger);
+
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
   
