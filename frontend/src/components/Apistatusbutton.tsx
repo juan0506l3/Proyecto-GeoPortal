@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { comprobarConexionAPI } from "../services/api";
-import "./Apistatusbutton.css";
+import "./ApiStatus.css";
 
 interface ApiStatusButtonProps {
 
