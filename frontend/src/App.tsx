@@ -11,6 +11,7 @@ import { detectLayerProjection } from "./projections/detectLayerProjection";
 import { EVENT_CATEGORIES } from "./projections/eventCategories";
 import { supabase } from "./lib/supabaseClient";
 import "./App.css";
+import "./components/ApiStatus.css";
 //-------------------------------------------------------
 
 import { ejecutarClip } from "./services/api";
