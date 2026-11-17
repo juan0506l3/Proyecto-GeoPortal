@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { obtenerInnerJoinMunicipios } from "../services/api";
 import "./GeoJSONUploader.css";
 
 interface JoinResultLayerProps {
@@ -12,18 +13,15 @@ function JoinResultLayer({ onFileLoaded }: JoinResultLayerProps) {
     setCargando(true);
 
     try {
-      const response = await fetch("/data/municipios-con-conteo.geojson");
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
+      // El inner join lo ejecuta GDAL en el backend
+      const data = await obtenerInnerJoinMunicipios();
 
       onFileLoaded(data, "inner-join-eventos-por-municipio.geojson");
     } catch (error) {
       console.error("Error al cargar el resultado del inner join:", error);
-      alert("No se pudo cargar el resultado del inner join.");
+      alert(
+        "No se pudo ejecutar el inner join. Revisa que el backend esté encendido."
+      );
     } finally {
       setCargando(false);
     }

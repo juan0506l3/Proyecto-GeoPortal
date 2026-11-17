@@ -1,4 +1,3 @@
-
 const API_URL = import.meta.env.VITE_API_URL;
 
 export interface HealthResponse {
@@ -22,6 +21,32 @@ export async function comprobarConexionAPI(): Promise<HealthResponse> {
   }
 
   return response.json() as Promise<HealthResponse>;
+}
+
+export async function obtenerInnerJoinMunicipios(): Promise<unknown> {
+  if (!API_URL) {
+    throw new Error("Falta configurar la variable VITE_API_URL.");
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/inner-join/municipios-con-conteo`,
+    {
+      headers: {
+        "ngrok-skip-browser-warning": "true",
+      },
+    }
+  );
+
+  const resultado = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      resultado?.error ??
+        `Error ejecutando el inner join: HTTP ${response.status}`
+    );
+  }
+
+  return resultado;
 }
 
 export async function ejecutarClip(

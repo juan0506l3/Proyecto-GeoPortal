@@ -55,7 +55,8 @@ import {
 import { supabase } from "../lib/supabaseClient";
 import {
   eventosToGeoJSON,
-  esEventoVigente,
+  estadoEvento,
+  describirInicio,
 } from "../projections/eventosSupabase";
 
 import type { CapturedPoint } from "../projections/types";
@@ -163,15 +164,33 @@ function createEventCategoryStyle(activeCategories: Set<string>) {
         ? properties["fecha_fin"]
         : null;
 
-    if (
-      !esEventoVigente({
-        fecha_inicio: fechaInicio,
-        fecha_fin: fechaFin,
-      })
-    ) {
-      return undefined;
+    const estado = estadoEvento({
+      fecha_inicio: fechaInicio,
+      fecha_fin: fechaFin,
+    });
+
+    // Los eventos que ya terminaron no se dibujan
+    if (estado === "finalizado") return undefined;
+
+    // Eventos próximos: círculo hueco con el color de su categoría
+    if (estado === "proximo") {
+      const category = getFeatureCategory(properties);
+
+      if (!activeCategories.has(category)) return undefined;
+
+      return new Style({
+        image: new CircleStyle({
+          radius: 8,
+          fill: new Fill({ color: "white" }),
+          stroke: new Stroke({
+            color: getCategoryColor(category),
+            width: 3,
+          }),
+        }),
+      });
     }
 
+    // En curso (o sin fechas): círculo relleno como siempre
     return categoryStyle(feature);
   };
 }
@@ -551,6 +570,20 @@ function MapComponent({
               ).toLocaleString()} – ${new Date(fechaFin).toLocaleString()}`
             : "";
 
+        const estado = estadoEvento({
+          fecha_inicio: fechaInicio ?? null,
+          fecha_fin: fechaFin ?? null,
+        });
+
+        const estadoHtml =
+          estado === "proximo" && fechaInicio
+            ? `<span class="map-popup__badge map-popup__badge--next">Próximamente · ${describirInicio(
+                fechaInicio
+              )}</span>`
+            : estado === "en_curso"
+              ? `<span class="map-popup__badge map-popup__badge--live">En curso ahora</span>`
+              : "";
+
         const direccionHtml = direccion
           ? `<br />Dirección: ${direccion}`
           : "";
@@ -575,6 +608,7 @@ function MapComponent({
           </div>
 
           <div class="map-popup__info">
+            ${estadoHtml}
             <strong>${nombre}</strong>
             <br />
             Municipio: ${municipio}

@@ -36,17 +36,68 @@ export function esEventoDinamico(
   return Boolean(row.fecha_inicio && row.fecha_fin);
 }
 
-export function esEventoVigente(
+export type EstadoEvento =
+  | "permanente" // sin fechas: siempre visible
+  | "proximo" // todavía no empieza
+  | "en_curso" // está sucediendo ahora
+  | "finalizado"; // ya terminó
+
+export function estadoEvento(
   row: Pick<EventoRow, "fecha_inicio" | "fecha_fin">,
   ahora: Date = new Date()
-): boolean {
-  if (!esEventoDinamico(row)) return true;
+): EstadoEvento {
+  if (!esEventoDinamico(row)) return "permanente";
 
   const inicio = new Date(row.fecha_inicio as string).getTime();
   const fin = new Date(row.fecha_fin as string).getTime();
   const now = ahora.getTime();
 
-  return now >= inicio && now <= fin;
+  if (now < inicio) return "proximo";
+  if (now <= fin) return "en_curso";
+  return "finalizado";
+}
+
+// Se muestra en el mapa desde que se publica hasta que termina
+export function esEventoVisible(
+  row: Pick<EventoRow, "fecha_inicio" | "fecha_fin">,
+  ahora: Date = new Date()
+): boolean {
+  return estadoEvento(row, ahora) !== "finalizado";
+}
+
+// Está sucediendo ahora mismo (o no tiene fechas)
+export function esEventoVigente(
+  row: Pick<EventoRow, "fecha_inicio" | "fecha_fin">,
+  ahora: Date = new Date()
+): boolean {
+  const estado = estadoEvento(row, ahora);
+  return estado === "permanente" || estado === "en_curso";
+}
+
+const inicioDelDia = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+// "empieza mañana", "empieza en 3 semanas", "empieza en 2 meses"...
+export function describirInicio(
+  inicioIso: string,
+  ahora: Date = new Date()
+): string {
+  const inicio = new Date(inicioIso);
+
+  const dias = Math.round(
+    (inicioDelDia(inicio) - inicioDelDia(ahora)) / 86_400_000
+  );
+
+  if (dias <= 0) return "empieza hoy";
+  if (dias === 1) return "empieza mañana";
+  if (dias < 14) return `empieza en ${dias} días`;
+
+  if (dias < 60) {
+    return `empieza en ${Math.round(dias / 7)} semanas`;
+  }
+
+  const meses = Math.round(dias / 30);
+  return `empieza en ${meses} ${meses === 1 ? "mes" : "meses"}`;
 }
 
 export function filtrarEventosVigentes(
