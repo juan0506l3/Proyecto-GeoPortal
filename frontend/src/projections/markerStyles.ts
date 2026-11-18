@@ -9,20 +9,30 @@ import { getCategoryColor } from "./eventCategories";
 /*
  * Tres tipos de marcador en el mapa:
  *
- *  1. Lugar fijo     -> casita (estructura permanente) con un dibujo por categoría
- *  2. Evento próximo -> círculo hueco con borde de color
- *  3. Evento en vivo -> círculo con centro blanco (las ondas animadas las dibuja
+ *  1. Lugar fijo     -> casita (estructura permanente) con un dibujo por categoria
+ *  2. Evento proximo -> circulo hueco con borde de color
+ *  3. Evento en vivo -> circulo con centro blanco (las ondas animadas las dibuja
  *                       liveMarkers.ts encima)
  */
 
-/* ───────────── 1. Lugares fijos ───────────── */
+/* ------------- 1. Lugares fijos ------------- */
 
-// Cuerpo de la casita: techo en punta + paredes redondeadas
-const CUERPO_LUGAR =
-  '<path d="M16 2.5 30 12.5V30a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V12.5z" ' +
-  'fill="COLOR" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>';
+// Mezcla un color #rrggbb con blanco (0 = igual, 1 = blanco)
+function aclarar(hex: string, cantidad: number): string {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const mezclar = (c: number) => Math.round(c + (255 - c) * cantidad);
 
-// Dibujo blanco que va dentro de la casita según la categoría
+  const r = mezclar((n >> 16) & 255);
+  const g = mezclar((n >> 8) & 255);
+  const b = mezclar(n & 255);
+
+  return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+
+// Silueta de la casita: techo en punta + paredes con esquinas suaves
+const SILUETA = "M16 2.5 30 12.5V30a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V12.5z";
+
+// Dibujo blanco que va dentro de la casita segun la categoria
 const DIBUJOS: Record<string, string> = {
   // Nota musical
   musica:
@@ -30,7 +40,7 @@ const DIBUJOS: Record<string, string> = {
     '<rect x="15" y="16" width="2.2" height="10.4" fill="#ffffff"/>' +
     '<path d="M17.2 16l5.3 1.8v3.6l-5.3-1.8z" fill="#ffffff"/>',
 
-  // Copa de campeón
+  // Copa de campeon
   deportivo:
     '<path d="M11 15h10v5.2a5 5 0 0 1-10 0z" fill="#ffffff"/>' +
     '<path d="M11 16.5H8.8v1.6c0 1.9 1.1 3 2.7 3.4" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round"/>' +
@@ -38,13 +48,22 @@ const DIBUJOS: Record<string, string> = {
     '<rect x="15" y="25" width="2" height="3" fill="#ffffff"/>' +
     '<rect x="11.5" y="28" width="9" height="2.2" rx="1" fill="#ffffff"/>',
 
-  // Corazón
+  // Familia: dos adultos y un nino en el centro
   familiar:
-    '<path d="M16 29.6s-7.4-4.7-7.4-9.7A4 4 0 0 1 16 18a4 4 0 0 1 7.4 1.9c0 5-7.4 9.7-7.4 9.7z" fill="#ffffff"/>',
+    '<circle cx="9" cy="18.6" r="2.1" fill="#ffffff"/>' +
+    '<path d="M6 29.6v-4a3 3 0 0 1 6 0v4z" fill="#ffffff"/>' +
+    '<circle cx="23" cy="18.6" r="2.1" fill="#ffffff"/>' +
+    '<path d="M20 29.6v-4a3 3 0 0 1 6 0v4z" fill="#ffffff"/>' +
+    '<circle cx="16" cy="22.8" r="1.8" fill="#ffffff"/>' +
+    '<path d="M13.4 29.6v-2.2a2.6 2.6 0 0 1 5.2 0v2.2z" fill="#ffffff"/>',
 
-  // Estrella
+  // Edificio con columnas (lugar emblematico)
   otros:
-    '<polygon points="16.0,15.0 18.0,20.2 23.6,20.5 19.2,24.1 20.7,29.5 16.0,26.4 11.3,29.5 12.8,24.1 8.4,20.5 14.0,20.2" fill="#ffffff"/>',
+    '<path d="M16 15.2 24.6 19.4H7.4z" fill="#ffffff"/>' +
+    '<rect x="9.2" y="21" width="2.3" height="6.4" rx="0.4" fill="#ffffff"/>' +
+    '<rect x="14.85" y="21" width="2.3" height="6.4" rx="0.4" fill="#ffffff"/>' +
+    '<rect x="20.5" y="21" width="2.3" height="6.4" rx="0.4" fill="#ffffff"/>' +
+    '<rect x="7.4" y="28.2" width="17.2" height="2.2" rx="0.7" fill="#ffffff"/>',
 };
 
 export function crearSvgLugarFijo(categoria: string): string {
@@ -53,7 +72,19 @@ export function crearSvgLugarFijo(categoria: string): string {
 
   return (
     '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="34" viewBox="0 0 32 36">' +
-    CUERPO_LUGAR.replace("COLOR", color) +
+    "<defs>" +
+    // Degradado suave: mas claro arriba, color pleno abajo
+    '<linearGradient id="g-' + categoria + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="' + aclarar(color, 0.22) + '"/>' +
+    '<stop offset="1" stop-color="' + color + '"/>' +
+    "</linearGradient>" +
+    "</defs>" +
+    // Contorno oscuro tenue: separa la casita del fondo del mapa
+    '<path d="' + SILUETA + '" fill="none" stroke="#000000" stroke-opacity="0.28" ' +
+    'stroke-width="3.6" stroke-linejoin="round"/>' +
+    // Cuerpo con borde blanco fino
+    '<path d="' + SILUETA + '" fill="url(#g-' + categoria + ')" stroke="#ffffff" stroke-width="1.8" ' +
+    'stroke-linejoin="round"/>' +
     dibujo +
     "</svg>"
   );
@@ -77,7 +108,7 @@ export function estiloLugarFijo(categoria: string): Style {
   return estilosLugar[categoria];
 }
 
-/* ───────────── 2. Eventos próximos ───────────── */
+/* ------------- 2. Eventos proximos ------------- */
 
 const estilosProximo: Record<string, Style> = {};
 
@@ -98,14 +129,14 @@ export function estiloEventoProximo(categoria: string): Style {
   return estilosProximo[categoria];
 }
 
-/* ───────────── 3. Eventos en vivo ───────────── */
+/* ------------- 3. Eventos en vivo ------------- */
 
 const estilosEnVivo: Record<string, Style[]> = {};
 
 export function estiloEventoEnVivo(categoria: string): Style[] {
   if (!estilosEnVivo[categoria]) {
     estilosEnVivo[categoria] = [
-      // Círculo de color con borde blanco
+      // Circulo de color con borde blanco
       new Style({
         image: new CircleStyle({
           radius: 9,
@@ -114,7 +145,7 @@ export function estiloEventoEnVivo(categoria: string): Style[] {
         }),
       }),
 
-      // Centro blanco: se ve como el punto de "transmisión en vivo"
+      // Centro blanco: se ve como el punto de "transmision en vivo"
       new Style({
         image: new CircleStyle({
           radius: 3.2,
