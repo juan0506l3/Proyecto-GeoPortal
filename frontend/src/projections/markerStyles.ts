@@ -99,8 +99,8 @@ export function estiloLugarFijo(categoria: string): Style {
         src:
           "data:image/svg+xml;utf8," +
           encodeURIComponent(crearSvgLugarFijo(categoria)),
-        // La base de la casita queda justo sobre el punto
-        anchor: [0.5, 1],
+        // La casita queda centrada sobre el punto (igual que los circulos)
+        anchor: [0.5, 0.5],
       }),
     });
   }
