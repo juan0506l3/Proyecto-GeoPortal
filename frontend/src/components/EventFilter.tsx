@@ -12,7 +12,7 @@ function EventFilter({
 }: EventFilterProps) {
   return (
     <section className="event-filter">
-      <h3 className="event-filter__title">Filtrar eventos</h3>
+      <h3 className="event-filter__title">Filtrar por categoría</h3>
 
       <ul className="event-filter__list">
         {EVENT_CATEGORIES.map((category) => (
@@ -34,6 +34,57 @@ function EventFilter({
           </li>
         ))}
       </ul>
+
+      <div className="event-filter__legend">
+        <h4 className="event-filter__legend-title">Cómo leer el mapa</h4>
+
+        <ul className="event-filter__legend-list">
+          <li>
+            <span className="event-filter__symbol">
+              <svg
+                width="15"
+                height="17"
+                viewBox="0 0 32 36"
+                aria-hidden="true"
+              >
+                <path
+                  d="M16 2.5 30 12.5V30a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V12.5z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+
+            <span>
+              <strong>Lugar fijo</strong>
+              <small>Estructura que siempre está ahí</small>
+            </span>
+          </li>
+
+          <li>
+            <span className="event-filter__symbol">
+              <span className="event-filter__ring-upcoming" />
+            </span>
+
+            <span>
+              <strong>Evento próximo</strong>
+              <small>Todavía no empieza</small>
+            </span>
+          </li>
+
+          <li>
+            <span className="event-filter__symbol">
+              <span className="event-filter__live">
+                <i />
+              </span>
+            </span>
+
+            <span>
+              <strong>En vivo ahora</strong>
+              <small>Está sucediendo en este momento</small>
+            </span>
+          </li>
+        </ul>
+      </div>
     </section>
   );
 }

@@ -59,6 +59,13 @@ import {
   describirInicio,
 } from "../projections/eventosSupabase";
 
+import {
+  estiloLugarFijo,
+  estiloEventoProximo,
+  estiloEventoEnVivo,
+} from "../projections/markerStyles";
+import { createLiveMarkers } from "../projections/liveMarkers";
+
 import type { CapturedPoint } from "../projections/types";
 
 import {
@@ -149,8 +156,6 @@ function createCategoryStyle(activeCategories: Set<string>) {
 }
 
 function createEventCategoryStyle(activeCategories: Set<string>) {
-  const categoryStyle = createCategoryStyle(activeCategories);
-
   return (feature: FeatureLike) => {
     const properties = feature.getProperties() as Record<string, unknown>;
 
@@ -172,26 +177,18 @@ function createEventCategoryStyle(activeCategories: Set<string>) {
     // Los eventos que ya terminaron no se dibujan
     if (estado === "finalizado") return undefined;
 
-    // Eventos próximos: círculo hueco con el color de su categoría
-    if (estado === "proximo") {
-      const category = getFeatureCategory(properties);
+    const category = getFeatureCategory(properties);
 
-      if (!activeCategories.has(category)) return undefined;
+    if (!activeCategories.has(category)) return undefined;
 
-      return new Style({
-        image: new CircleStyle({
-          radius: 8,
-          fill: new Fill({ color: "white" }),
-          stroke: new Stroke({
-            color: getCategoryColor(category),
-            width: 3,
-          }),
-        }),
-      });
-    }
+    // Lugar fijo (sin fechas): casita con el dibujo de su categoría
+    if (estado === "permanente") return estiloLugarFijo(category);
 
-    // En curso (o sin fechas): círculo relleno como siempre
-    return categoryStyle(feature);
+    // Evento próximo: círculo hueco con el color de su categoría
+    if (estado === "proximo") return estiloEventoProximo(category);
+
+    // Evento en vivo: círculo con centro blanco (las ondas las anima liveMarkers)
+    return estiloEventoEnVivo(category);
   };
 }
 
@@ -226,6 +223,9 @@ function MapComponent({
 
   useEffect(() => {
     if (!mapRef.current) return;
+
+    // Anima los eventos que están en vivo (ondas, ecualizador, etc.)
+    const liveMarkers = createLiveMarkers(activeCategories);
 
     const eventosTileSource = new VectorTileSource({
       format: new MVT(),
@@ -306,6 +306,8 @@ function MapComponent({
                 });
 
                 vectorTile.setFeatures(features);
+
+                liveMarkers.registrar(features, z);
               } catch (error) {
                 console.error(
                   "Error cargando tesela de eventos desde Supabase:",
@@ -488,6 +490,8 @@ function MapComponent({
       }),
     });
 
+    liveMarkers.conectar(map);
+
     const resizeObserver = new ResizeObserver(() => map.updateSize());
     resizeObserver.observe(mapRef.current);
 
@@ -581,8 +585,10 @@ function MapComponent({
                 fechaInicio
               )}</span>`
             : estado === "en_curso"
-              ? `<span class="map-popup__badge map-popup__badge--live">En curso ahora</span>`
-              : "";
+              ? `<span class="map-popup__badge map-popup__badge--live">En vivo ahora</span>`
+              : estado === "permanente"
+                ? `<span class="map-popup__badge map-popup__badge--venue">Lugar fijo</span>`
+                : "";
 
         const direccionHtml = direccion
           ? `<br />Dirección: ${direccion}`
@@ -721,6 +727,7 @@ function MapComponent({
       }
 
       window.clearInterval(vigenciaIntervalId);
+      liveMarkers.destruir();
       supabase.removeChannel(eventosChannel);
       resizeObserver.disconnect();
       map.setTarget(undefined);

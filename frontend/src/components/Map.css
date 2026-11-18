@@ -141,3 +141,203 @@
   color: #205295; font-weight: 600; text-decoration: none;
 }
 .map-popup__link:hover { text-decoration: underline; }
+.map-popup__badge {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.map-popup__badge--next { background: #e8f0fa; color: #205295; }
+.map-popup__badge--live { background: #e7f5ee; color: #1f7a4d; }
+
+/* ───── Etiquetas del popup ───── */
+
+.map-popup__badge--venue { background: #f1f3f5; color: #495057; }
+
+/* ───── Eventos EN VIVO (los crea liveMarkers.ts) ───── */
+
+.live-marker {
+  position: relative;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.live-marker > * {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+/* Ondas que se expanden desde el punto */
+.live-marker__ring {
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+
+  border-radius: 50%;
+  border: 2.5px solid var(--live-color);
+  background: color-mix(in srgb, var(--live-color) 20%, transparent);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
+
+  opacity: 0;
+  animation: live-wave 2.4s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+
+.live-marker__ring:nth-child(2) { animation-delay: 0.8s; }
+.live-marker__ring:nth-child(3) { animation-delay: 1.6s; }
+
+@keyframes live-wave {
+  0%   { transform: scale(0.7); opacity: 1; }
+  65%  { opacity: 0.4; }
+  100% { transform: scale(3.6); opacity: 0; }
+}
+
+/* Música: ecualizador al lado del punto */
+.live-marker__eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+
+  height: 14px;
+  padding: 3px 4px;
+  margin: -30px 0 0 7px;
+
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.live-marker__eq i {
+  width: 2.5px;
+  height: 100%;
+
+  border-radius: 2px;
+  background: var(--live-color);
+
+  transform-origin: bottom;
+  animation: live-eq 0.9s ease-in-out infinite;
+}
+
+.live-marker__eq i:nth-child(1) { animation-delay: 0s; }
+.live-marker__eq i:nth-child(2) { animation-delay: 0.25s; }
+.live-marker__eq i:nth-child(3) { animation-delay: 0.5s; }
+.live-marker__eq i:nth-child(4) { animation-delay: 0.15s; }
+
+@keyframes live-eq {
+  0%, 100% { transform: scaleY(0.25); }
+  50%      { transform: scaleY(1); }
+}
+
+/* Deportivo: doble latido + balón que da vueltas */
+.live-marker--deportivo .live-marker__ring {
+  animation: live-beat 1.3s ease-out infinite;
+}
+
+.live-marker--deportivo .live-marker__ring:nth-child(2) {
+  animation-delay: 0.22s;
+}
+
+@keyframes live-beat {
+  0%   { transform: scale(0.7); opacity: 1; }
+  40%  { transform: scale(2.2); opacity: 0.55; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+.live-marker__orbit {
+  width: 0;
+  height: 0;
+  animation: live-orbit 1.5s linear infinite;
+}
+
+.live-marker__orbit i {
+  position: absolute;
+  left: 14px;
+  top: -4.5px;
+
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+
+  border-radius: 50%;
+  border: 2px solid var(--live-color);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes live-orbit {
+  to { transform: rotate(360deg); }
+}
+
+/* Familiar: brillo que respira + destellos que titilan */
+.live-marker__glow {
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--live-color) 60%, transparent) 0%,
+    transparent 70%
+  );
+
+  animation: live-breathe 2s ease-in-out infinite;
+}
+
+@keyframes live-breathe {
+  0%, 100% { transform: scale(0.8); opacity: 0.6; }
+  50%      { transform: scale(1.6); opacity: 1; }
+}
+
+.live-marker__sparks {
+  width: 0;
+  height: 0;
+  animation: live-orbit 7s linear infinite;
+}
+
+.live-marker__sparks i {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+  background: var(--live-color);
+  box-shadow: 0 0 0 1.5px #ffffff;
+
+  opacity: 0.2;
+  animation: live-twinkle 1.6s ease-in-out infinite;
+}
+
+.live-marker__sparks i:nth-child(1) { transform: rotate(0deg)   translateY(-20px); animation-delay: 0s; }
+.live-marker__sparks i:nth-child(2) { transform: rotate(90deg)  translateY(-20px); animation-delay: 0.4s; }
+.live-marker__sparks i:nth-child(3) { transform: rotate(180deg) translateY(-20px); animation-delay: 0.8s; }
+.live-marker__sparks i:nth-child(4) { transform: rotate(270deg) translateY(-20px); animation-delay: 1.2s; }
+
+@keyframes live-twinkle {
+  0%, 100% { opacity: 0.2; }
+  50%      { opacity: 1; }
+}
+
+/* Otros: radar lento */
+.live-marker--otros .live-marker__ring { animation-duration: 3.4s; }
+.live-marker--otros .live-marker__ring:nth-child(2) { animation-delay: 1.7s; }
+
+/* Si la persona pidió menos movimiento en su sistema: todo queda quieto */
+@media (prefers-reduced-motion: reduce) {
+  .live-marker *,
+  .live-marker__sparks i {
+    animation: none !important;
+  }
+
+  .live-marker__ring { opacity: 0.35; transform: scale(2); }
+  .live-marker__eq i { transform: scaleY(0.7); }
+  .live-marker__sparks i { opacity: 0.9; }
+}
