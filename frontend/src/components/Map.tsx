@@ -542,6 +542,10 @@ function MapComponent({
 
         const tipo = escapeHtml(properties["tipo"] ?? "-");
 
+        const subcategoria = properties["subcategoria"]
+          ? escapeHtml(properties["subcategoria"])
+          : null;
+
         const direccion = properties["direccion"]
           ? escapeHtml(properties["direccion"])
           : null;
@@ -623,6 +627,7 @@ function MapComponent({
             Tipo: ${tipo}
             <br />
             Categoría: ${categoria}
+            ${subcategoria ? `<br />Subcategoría: ${subcategoria}` : ""}
             ${vigenciaHtml}
             ${enlaceHtml}
           </div>
