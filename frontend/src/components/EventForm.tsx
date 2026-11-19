@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { DragEvent, FormEvent, ChangeEvent } from "react";
-import { EVENT_CATEGORIES } from "../projections/eventCategories";
+import {
+  EVENT_CATEGORIES,
+  EVENT_SUBCATEGORIES,
+} from "../projections/eventCategories";
 import { crearEvento } from "../projections/eventosSupabase";
 import type { NuevoEvento } from "../projections/eventosSupabase";
 import {
@@ -27,6 +30,7 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
   const [direccion, setDireccion] = useState("");
   const [tipo, setTipo] = useState("");
   const [categoria, setCategoria] = useState(EVENT_CATEGORIES[0]?.id ?? "");
+  const [subcategoria, setSubcategoria] = useState("");
   const [lng, setLng] = useState("");
   const [lat, setLat] = useState("");
 
@@ -116,6 +120,8 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
     setDireccion("");
     setFlyerUrl("");
     setTipo("");
+    setCategoria(EVENT_CATEGORIES[0]?.id ?? "");
+    setSubcategoria("");
     setEsDinamico(false);
     setHorarioKey((k) => k + 1);
     eliminarFlyer();
@@ -125,7 +131,13 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
     event.preventDefault();
     setMensaje(null);
 
-    if (!nombre.trim() || !municipio.trim() || !tipo.trim() || !categoria) {
+    if (
+      !nombre.trim() ||
+      !municipio.trim() ||
+      !tipo.trim() ||
+      !categoria ||
+      (EVENT_SUBCATEGORIES[categoria]?.length > 0 && !subcategoria)
+    ) {
       setMensaje({
         tipo: "error",
         texto: "Completa nombre, municipio, tipo y categoría.",
@@ -184,6 +196,7 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
       municipio: normalizarMunicipio(municipio) ?? municipio.trim(),
       tipo: tipo.trim(),
       categoria,
+      subcategoria: subcategoria || null,
       direccion: direccion.trim() || null,
       flyer_url: enlaceFlyer,
       lng: lngNum,
@@ -297,7 +310,10 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
             <span>Categoría</span>
             <select
               value={categoria}
-              onChange={(e) => setCategoria(e.target.value)}
+              onChange={(e) => {
+                setCategoria(e.target.value);
+                setSubcategoria("");
+              }}
               required
             >
               {EVENT_CATEGORIES.map((cat) => (
@@ -307,6 +323,25 @@ function EventForm({ coordinates, onEventCreated }: EventFormProps) {
               ))}
             </select>
           </label>
+
+          {EVENT_SUBCATEGORIES[categoria]?.length > 0 && (
+            <label className="event-form__field">
+              <span>Subcategoría</span>
+              <select
+                value={subcategoria}
+                onChange={(e) => setSubcategoria(e.target.value)}
+                required
+              >
+                <option value="">Selecciona una subcategoría</option>
+
+                {EVENT_SUBCATEGORIES[categoria].map((subcat) => (
+                  <option key={subcat} value={subcat}>
+                    {subcat}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <div className="event-form__coords">
             <label className="event-form__field">

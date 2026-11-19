@@ -1,3 +1,4 @@
+
 export interface EventCategory {
   id: string;
   label: string;
@@ -10,6 +11,29 @@ export const EVENT_CATEGORIES: EventCategory[] = [
   { id: "familiar", label: "Familiar", color: "#43a047" },
   { id: "otros", label: "Otros", color: "#757575" },
 ];
+
+export const EVENT_SUBCATEGORIES: Record<string, string[]> = {
+  deportivo: [
+    "Fútbol",
+    "Baloncesto",
+    "Tenis de mesa",
+  ],
+  musica: [
+    "Vallenato",
+    "Rock",
+    "Metal",
+    "Bachata",
+    "Salsa",
+    "Reguetón",
+    "Pop",
+  ],
+  familiar: [
+    "Ferias",
+    "Actividades recreativas",
+    "Actividades infantiles",
+  ],
+  otros: [],
+};
 
 const TIPO_TO_CATEGORY: Record<string, string> = {
   "unidad deportiva": "deportivo",

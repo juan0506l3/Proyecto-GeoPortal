@@ -6,6 +6,7 @@ export interface EventoRow {
   nombre: string;
   municipio: string | null;
   categoria: string;
+  subcategoria: string | null;
   tipo: string | null;
   direccion: string | null;
   lng: number;
@@ -22,6 +23,7 @@ export interface NuevoEvento {
   municipio: string | null;
   tipo: string | null;
   categoria: string;
+  subcategoria: string | null;
   direccion: string | null;
   flyer_url: string | null;
   lng: number;
@@ -118,6 +120,7 @@ export function eventosToGeoJSON(rows: EventoRow[]) {
         nombre: row.nombre,
         municipio: normalizarMunicipio(row.municipio),
         categoria: row.categoria,
+        subcategoria: row.subcategoria,
         tipo: row.tipo,
         direccion: row.direccion,
         fecha_inicio: row.fecha_inicio,
