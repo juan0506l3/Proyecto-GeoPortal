@@ -34,7 +34,14 @@ export const EVENT_SUBCATEGORIES: Record<string, string[]> = {
     "Actividades recreativas",
     "Actividades infantiles",
   ],
-  otros: [],
+  otros: [
+    "Exposiciones",
+    "Conferencias",
+    "Talleres",
+    "Seminarios",
+    "Charlas",
+    "Discotecas",
+  ],
 };
 
 const TIPO_TO_CATEGORY: Record<string, string> = {
