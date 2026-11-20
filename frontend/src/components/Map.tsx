@@ -81,6 +81,7 @@ interface MapComponentProps {
   layerTargetProjection?: string | null;
   reprojectedLayer?: unknown | null;
   activeCategories: Set<string>;
+  activeSubcategories: Set<string>;
   onLayerProjectionChange: (info: LayerProjectionInfo) => void;
   onCoordinateCapture?: (point: CapturedPoint) => void;
   onPointSelected?: (lonLat: [number, number]) => void;
@@ -155,7 +156,10 @@ function createCategoryStyle(activeCategories: Set<string>) {
   };
 }
 
-function createEventCategoryStyle(activeCategories: Set<string>) {
+function createEventCategoryStyle(
+  activeCategories: Set<string>,
+  activeSubcategories: Set<string>
+) {
   return (feature: FeatureLike) => {
     const properties = feature.getProperties() as Record<string, unknown>;
 
@@ -181,6 +185,16 @@ function createEventCategoryStyle(activeCategories: Set<string>) {
 
     if (!activeCategories.has(category)) return undefined;
 
+    const subcategoria = properties["subcategoria"];
+
+    if (
+      typeof subcategoria === "string" &&
+      subcategoria.trim() !== "" &&
+      !activeSubcategories.has(`${category}:${subcategoria}`)
+    ) {
+      return undefined;
+    }
+
     // Lugar fijo (sin fechas): casita con el dibujo de su categoría
     if (estado === "permanente") return estiloLugarFijo(category);
 
@@ -197,6 +211,7 @@ function MapComponent({
   layers,
   layerTargetProjection,
   activeCategories,
+  activeSubcategories,
   onLayerProjectionChange,
   onCoordinateCapture,
   onPointSelected,
@@ -323,7 +338,10 @@ function MapComponent({
 
     const deportivosLayer = new VectorTileLayer({
       source: eventosTileSource,
-      style: createEventCategoryStyle(activeCategories),
+      style: createEventCategoryStyle(
+        activeCategories,
+        activeSubcategories
+      ),
     });
 
     deportivosLayer.set("layerName", "Eventos (Supabase)");
@@ -741,6 +759,7 @@ function MapComponent({
     projection,
     layers,
     activeCategories,
+    activeSubcategories,
     onLayerProjectionChange,
     onCoordinateCapture,
     onPointSelected,

@@ -8,7 +8,7 @@ import type { LayerProjectionInfo } from "./projections/detectLayerProjection";
 import type { CapturedPoint } from "./projections/types";
 import type { GeoJSONLayer } from "./projections/layers";
 import { detectLayerProjection } from "./projections/detectLayerProjection";
-import { EVENT_CATEGORIES } from "./projections/eventCategories";
+import { EVENT_CATEGORIES, EVENT_SUBCATEGORIES } from "./projections/eventCategories";
 import { supabase } from "./lib/supabaseClient";
 import "./App.css";
 import "./components/ApiStatus.css";
@@ -56,6 +56,15 @@ function App() {
   // Categorías de evento activas en el panel "Filtrar eventos"
   const [activeCategories, setActiveCategories] = useState<Set<string>>(
     () => new Set(EVENT_CATEGORIES.map((category) => category.id))
+  );
+
+  const [activeSubcategories, setActiveSubcategories] = useState<Set<string>>(
+    () =>
+      new Set(
+        Object.entries(EVENT_SUBCATEGORIES).flatMap(([categoryId, subcategories]) =>
+          subcategories.map((subcategory) => `${categoryId}:${subcategory}`)
+        )
+      )
   );
 
   // Estado de autenticación del administrador
@@ -107,13 +116,50 @@ function App() {
   };
 
   const handleToggleCategory = (categoryId: string) => {
+    const activar = !activeCategories.has(categoryId);
+
     setActiveCategories((previous) => {
       const next = new Set(previous);
 
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
-      } else {
+      if (activar) {
         next.add(categoryId);
+      } else {
+        next.delete(categoryId);
+      }
+
+      return next;
+    });
+
+    setActiveSubcategories((previous) => {
+      const next = new Set(previous);
+
+      EVENT_SUBCATEGORIES[categoryId]?.forEach((subcategory) => {
+        const key = `${categoryId}:${subcategory}`;
+
+        if (activar) {
+          next.add(key);
+        } else {
+          next.delete(key);
+        }
+      });
+
+      return next;
+    });
+  };
+
+  const handleToggleSubcategory = (
+    categoryId: string,
+    subcategory: string
+  ) => {
+    const key = `${categoryId}:${subcategory}`;
+
+    setActiveSubcategories((previous) => {
+      const next = new Set(previous);
+
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
       }
 
       return next;
@@ -299,6 +345,7 @@ function App() {
             reprojectedLayer
           }
           activeCategories={activeCategories}
+          activeSubcategories={activeSubcategories}
           onLayerProjectionChange={
             setLayerProjection
           }
@@ -317,6 +364,8 @@ function App() {
           onFileLoaded={handleGeoJSONLoaded}
           activeCategories={activeCategories}
           onToggleCategory={handleToggleCategory}
+          activeSubcategories={activeSubcategories}
+          onToggleSubcategory={handleToggleSubcategory}
           layers={layers}
           onLayerVisibilityChange={handleLayerVisibilityChange}
           onLayerDelete={handleLayerDelete}

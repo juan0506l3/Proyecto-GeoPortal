@@ -21,6 +21,8 @@ interface SidebarProps {
   onFileLoaded: (data: unknown, fileName: string) => void;
   activeCategories: Set<string>;
   onToggleCategory: (categoryId: string) => void;
+  activeSubcategories: Set<string>;
+  onToggleSubcategory: (categoryId: string, subcategory: string) => void;
   layers: GeoJSONLayer[];
   onLayerVisibilityChange: (id: string, visible: boolean) => void;
   onLayerDelete: (id: string) => void;
@@ -41,6 +43,8 @@ function Sidebar({
   onFileLoaded,
   activeCategories,
   onToggleCategory,
+  activeSubcategories,
+  onToggleSubcategory,
   layers,
   onLayerVisibilityChange,
   onLayerDelete,
@@ -122,6 +126,8 @@ function Sidebar({
         <EventFilter
           activeCategories={activeCategories}
           onToggleCategory={onToggleCategory}
+          activeSubcategories={activeSubcategories}
+          onToggleSubcategory={onToggleSubcategory}
         />
 
         <LayerList
