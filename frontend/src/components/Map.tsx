@@ -240,7 +240,10 @@ function MapComponent({
     if (!mapRef.current) return;
 
     // Anima los eventos que están en vivo (ondas, ecualizador, etc.)
-    const liveMarkers = createLiveMarkers(activeCategories);
+    const liveMarkers = createLiveMarkers(
+      activeCategories,
+      activeSubcategories
+    );
 
     const eventosTileSource = new VectorTileSource({
       format: new MVT(),

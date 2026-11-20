@@ -18,6 +18,7 @@ interface EventoDinamico {
   coordenada: [number, number];
   zoom: number;
   categoria: string;
+  subcategoria: string;
   inicio: string;
   fin: string;
 }
@@ -79,7 +80,10 @@ function coordenadaDe(feature: FeatureLike): [number, number] | null {
   return null;
 }
 
-export function createLiveMarkers(activeCategories: Set<string>) {
+export function createLiveMarkers(
+  activeCategories: Set<string>,
+  activeSubcategories: Set<string>
+) {
   const eventos: Record<string, EventoDinamico> = {};
   const overlays: Record<string, Overlay> = {};
 
@@ -113,6 +117,13 @@ export function createLiveMarkers(activeCategories: Set<string>) {
       const evento = eventos[clave];
 
       if (!activeCategories.has(evento.categoria)) continue;
+
+      if (
+        evento.subcategoria.trim() !== "" &&
+        !activeSubcategories.has(`${evento.categoria}:${evento.subcategoria}`)
+      ) {
+        continue;
+      }
 
       const estado = estadoEvento(
         { fecha_inicio: evento.inicio, fecha_fin: evento.fin },
@@ -179,6 +190,10 @@ export function createLiveMarkers(activeCategories: Set<string>) {
           coordenada,
           zoom,
           categoria: getFeatureCategory(propiedades),
+          subcategoria:
+              typeof propiedades["subcategoria"] === "string"
+                ? propiedades["subcategoria"]
+                : "",
           inicio,
           fin,
         };
