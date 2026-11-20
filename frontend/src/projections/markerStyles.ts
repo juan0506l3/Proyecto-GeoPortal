@@ -156,4 +156,4 @@ export function estiloEventoEnVivo(categoria: string): Style[] {
   }
 
   return estilosEnVivo[categoria];
-}
+} 

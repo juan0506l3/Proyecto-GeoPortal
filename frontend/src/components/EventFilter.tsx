@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import {
   EVENT_CATEGORIES,
   EVENT_SUBCATEGORIES,
@@ -50,24 +49,41 @@ function EventFilter({
           const hasSubcategories = subcategories.length > 0;
           const expanded = expandedCategories.has(category.id);
           const categoryActive = activeCategories.has(category.id);
+          const activeCount = subcategories.filter((subcategory) =>
+            activeSubcategories.has(`${category.id}:${subcategory}`)
+          ).length;
+          const partial =
+            categoryActive &&
+            hasSubcategories &&
+            activeCount > 0 &&
+            activeCount < subcategories.length;
 
           return (
-            <li key={category.id} className="event-filter__item">
+            <li
+              key={category.id}
+              className="event-filter__item"
+              style={{ "--cat-color": category.color } as CSSProperties}
+            >
               <div className="event-filter__category">
                 <label className="event-filter__label">
                   <input
                     type="checkbox"
+                    className="event-filter__check"
                     checked={categoryActive}
+                    ref={(element) => {
+                      if (element) element.indeterminate = partial;
+                    }}
                     onChange={() => onToggleCategory(category.id)}
                   />
 
-                  <span
-                    className="event-filter__dot"
-                    style={{ backgroundColor: category.color }}
-                  />
-
-                  {category.label}
+                  <span className="event-filter__name">{category.label}</span>
                 </label>
+
+                {hasSubcategories && categoryActive && (
+                  <span className="event-filter__count">
+                    {activeCount}/{subcategories.length}
+                  </span>
+                )}
 
                 {hasSubcategories && (
                   <button
@@ -81,9 +97,26 @@ function EventFilter({
                         : `Mostrar subcategorías de ${category.label}`
                     }
                   >
-                    <span className={expanded ? "event-filter__chevron event-filter__chevron--open" : "event-filter__chevron"}>
-                      ▾
-                    </span>
+                    <svg
+                      className={
+                        expanded
+                          ? "event-filter__chevron event-filter__chevron--open"
+                          : "event-filter__chevron"
+                      }
+                      width="14"
+                      height="14"
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M3.5 6 8 10.5 12.5 6"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </button>
                 )}
               </div>
@@ -101,6 +134,7 @@ function EventFilter({
                         <label className="event-filter__subcategory-label">
                           <input
                             type="checkbox"
+                            className="event-filter__check"
                             checked={activeSubcategories.has(key)}
                             disabled={!categoryActive}
                             onChange={() =>
@@ -108,7 +142,7 @@ function EventFilter({
                             }
                           />
 
-                          {subcategory}
+                          <span>{subcategory}</span>
                         </label>
                       </li>
                     );

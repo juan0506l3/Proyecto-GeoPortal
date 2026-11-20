@@ -1,3 +1,5 @@
+/* ───── Contenedor ───── */
+
 .event-filter {
   background: var(--gp-surface);
   border: 1px solid var(--gp-border);
@@ -18,40 +20,217 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.event-filter__label {
+.event-filter__item {
+  --cat-color: var(--gp-primary, #205295);
+}
+
+/* ───── Casillas personalizadas (usan el color de la categoría) ───── */
+
+.event-filter__check {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  box-sizing: border-box;
+
+  border: 1.8px solid color-mix(in srgb, var(--cat-color) 45%, #b8c4d2);
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+
+.event-filter__check::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  transform: scale(0.4);
+  opacity: 0;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+
+  -webkit-mask: var(--check-mask) center / 12px 12px no-repeat;
+  mask: var(--check-mask) center / 12px 12px no-repeat;
+}
+
+.event-filter__check {
+  --check-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.6 6.4 12 13 4.6' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.event-filter__check:hover:not(:disabled) {
+  border-color: var(--cat-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cat-color) 16%, transparent);
+}
+
+.event-filter__check:checked,
+.event-filter__check:indeterminate {
+  background: var(--cat-color);
+  border-color: var(--cat-color);
+}
+
+.event-filter__check:checked::after,
+.event-filter__check:indeterminate::after {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Estado parcial: algunas subcategorías activas -> guion */
+.event-filter__check:indeterminate {
+  --check-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8h9' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.event-filter__check:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.event-filter__check:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cat-color) 35%, transparent);
+}
+
+.event-filter__check:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ───── Fila de categoría ───── */
+
+.event-filter__category {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13.5px;
-  color: var(--gp-ink);
-  cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
+  gap: 6px;
+  border-radius: 8px;
+  padding-right: 4px;
   transition: background 0.12s ease;
 }
 
-.event-filter__label:hover {
+.event-filter__category:hover {
   background: var(--gp-surface-alt);
 }
 
-.event-filter__label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--gp-primary);
+.event-filter__label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 8px;
   cursor: pointer;
-  flex-shrink: 0;
+  user-select: none;
 }
 
-.event-filter__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.event-filter__name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--gp-ink);
 }
-  
+
+.event-filter__count {
+  flex-shrink: 0;
+  min-width: 30px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cat-color);
+  background: color-mix(in srgb, var(--cat-color) 12%, #ffffff);
+}
+
+.event-filter__expand {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--gp-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.event-filter__expand:hover {
+  background: color-mix(in srgb, var(--cat-color) 14%, transparent);
+  color: var(--cat-color);
+}
+
+.event-filter__expand:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--cat-color) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.event-filter__chevron {
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.event-filter__chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ───── Subcategorías ───── */
+
+.event-filter__subcategories {
+  list-style: none;
+  margin: 2px 0 8px 17px;
+  padding: 0 0 0 12px;
+  border-left: 2px solid color-mix(in srgb, var(--cat-color) 35%, #ffffff);
+}
+
+.event-filter__subcategory-item {
+  padding: 1px 0;
+}
+
+.event-filter__subcategory-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--gp-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.event-filter__subcategory-label:hover {
+  background: var(--gp-surface-alt);
+}
+
+.event-filter__subcategory-label:has(input:checked) {
+  color: var(--gp-ink);
+}
+
+.event-filter__subcategory-label:has(input:disabled) {
+  cursor: not-allowed;
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-filter__check,
+  .event-filter__check::after,
+  .event-filter__chevron {
+    transition: none;
+  }
+}
+
 /* ───── Leyenda: cómo leer el mapa ───── */
 
 .event-filter__legend {
@@ -162,52 +341,4 @@
     opacity: 0.4;
     transform: scale(1.7);
   }
-}
-
-.event-filter__category {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.event-filter__expand {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 4px 8px;
-  color: var(--gp-muted);
-  font-size: 16px;
-}
-
-.event-filter__chevron {
-  display: inline-block;
-  transition: transform 0.2s ease;
-}
-
-.event-filter__chevron--open {
-  transform: rotate(180deg);
-}
-
-.event-filter__subcategories {
-  list-style: none;
-  margin: 5px 0 8px 27px;
-  padding: 0 0 0 10px;
-  border-left: 2px solid var(--gp-border);
-}
-
-.event-filter__subcategory-item {
-  padding: 4px 0;
-}
-
-.event-filter__subcategory-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.event-filter__subcategory-label input:disabled {
-  cursor: not-allowed;
 }
