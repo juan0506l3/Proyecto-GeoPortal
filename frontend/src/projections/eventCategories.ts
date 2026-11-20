@@ -16,6 +16,8 @@ export const EVENT_SUBCATEGORIES: Record<string, string[]> = {
   deportivo: [
     "Fútbol",
     "Baloncesto",
+    "Maraton",
+    "Atletismo",
     "Tenis de mesa",
   ],
   musica: [
