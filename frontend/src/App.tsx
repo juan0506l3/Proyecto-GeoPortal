@@ -10,6 +10,9 @@ import type { GeoJSONLayer } from "./projections/layers";
 import { detectLayerProjection } from "./projections/detectLayerProjection";
 import { EVENT_CATEGORIES, EVENT_SUBCATEGORIES } from "./projections/eventCategories";
 import { supabase } from "./lib/supabaseClient";
+import ChatAssistant from "./components/ChatAssistant";
+import type { FocusTarget } from "./components/Map";
+import type { ChatEvento } from "./services/api";
 import "./App.css";
 import "./components/ApiStatus.css";
 //-------------------------------------------------------
@@ -168,6 +171,33 @@ function App() {
 
   const handlePointSelected = useCallback((lonLat: [number, number]) => {
     setSelectedPoint({ lng: lonLat[0], lat: lonLat[1] });
+  }, []);
+
+  // Evento al que el asistente de IA lleva al usuario (Map.tsx lo enfoca)
+  const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null);
+
+  const handleGoToEvent = useCallback((evento: ChatEvento) => {
+    // Asegura que el evento sea visible con los filtros actuales
+    setActiveCategories((previous) =>
+      previous.has(evento.categoria)
+        ? previous
+        : new Set(previous).add(evento.categoria)
+    );
+
+    if (evento.subcategoria) {
+      const key = `${evento.categoria}:${evento.subcategoria}`;
+
+      setActiveSubcategories((previous) =>
+        previous.has(key) ? previous : new Set(previous).add(key)
+      );
+    }
+
+    setFocusTarget({
+      lng: evento.lng,
+      lat: evento.lat,
+      nombre: evento.nombre,
+      nonce: Date.now(),
+    });
   }, []);
 
   const handleReproject = async () => {
@@ -336,6 +366,7 @@ function App() {
 
       <div className="app-layout__body">
         <MapComponent
+          focusTarget={focusTarget}
           projection={projection}
           layers={layers}
           layerTargetProjection={
@@ -379,6 +410,8 @@ function App() {
           onClip={handleClip}
         />
       </div>
+
+      <ChatAssistant onGoToEvent={handleGoToEvent} />
 
       {mostrarLogin && (
         <AdminLogin

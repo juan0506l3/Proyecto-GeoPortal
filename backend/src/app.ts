@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import chatRouter from "./chat.js";
 
 const app = express();
 const execFileAsync = promisify(execFile);
@@ -19,6 +20,9 @@ const DATA_DIR = path.resolve(__dirname, "..", "data");
 
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
+
+// Asistente de IA (POST /api/chat)
+app.use("/api", chatRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({

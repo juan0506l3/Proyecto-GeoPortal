@@ -12,7 +12,7 @@ import VectorTile from "ol/VectorTile";
 import TileState from "ol/TileState";
 import MVT from "ol/format/MVT";
 import { createXYZ } from "ol/tilegrid";
-import { get as getProjection } from "ol/proj";
+import { get as getProjection, fromLonLat } from "ol/proj";
 import type { Extent } from "ol/extent";
 import type Projection from "ol/proj/Projection";
 import type { default as OlFeature } from "ol/Feature";
@@ -75,6 +75,14 @@ import {
   normalizarUrl,
 } from "../projections/eventoUtils";
 
+// Evento al que el asistente de IA quiere llevar al usuario
+export interface FocusTarget {
+  lng: number;
+  lat: number;
+  nombre: string;
+  nonce: number;
+}
+
 interface MapComponentProps {
   projection: string;
   layers: GeoJSONLayer[];
@@ -85,6 +93,7 @@ interface MapComponentProps {
   onLayerProjectionChange: (info: LayerProjectionInfo) => void;
   onCoordinateCapture?: (point: CapturedPoint) => void;
   onPointSelected?: (lonLat: [number, number]) => void;
+  focusTarget?: FocusTarget | null;
 }
 
 const INTERVALO_REVISION_VIGENCIA_MS = 60000;
@@ -215,10 +224,12 @@ function MapComponent({
   onLayerProjectionChange,
   onCoordinateCapture,
   onPointSelected,
+  focusTarget,
 }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
 
   const eventosLayerRef = useRef<VectorTileLayer | null>(null);
+  const mapInstanceRef = useRef<Map | null>(null);
   const layerTargetProjectionRef = useRef<string | null>(
     layerTargetProjection ?? null
   );
@@ -512,6 +523,7 @@ function MapComponent({
     });
 
     liveMarkers.conectar(map);
+    mapInstanceRef.current = map;
 
     const resizeObserver = new ResizeObserver(() => map.updateSize());
     resizeObserver.observe(mapRef.current);
@@ -754,6 +766,7 @@ function MapComponent({
 
       window.clearInterval(vigenciaIntervalId);
       liveMarkers.destruir();
+      mapInstanceRef.current = null;
       supabase.removeChannel(eventosChannel);
       resizeObserver.disconnect();
       map.setTarget(undefined);
@@ -800,6 +813,52 @@ function MapComponent({
       applyBaseMap(baseLayersRef.current, baseMap);
     }
   }, [baseMap]);
+
+  // Lleva el mapa al evento elegido en el asistente y lo resalta unos segundos
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+
+    if (!focusTarget || !map) return;
+
+    const view = map.getView();
+    const center = fromLonLat(
+      [focusTarget.lng, focusTarget.lat],
+      view.getProjection()
+    );
+
+    view.animate({
+      center,
+      zoom: Math.max(view.getZoom() ?? 0, 16),
+      duration: 900,
+    });
+
+    const element = document.createElement("div");
+    element.className = "chat-focus";
+    element.innerHTML = `
+      <span class="chat-focus__ring"></span>
+      <span class="chat-focus__ring chat-focus__ring--2"></span>
+      <span class="chat-focus__label">
+        ${escapeHtml(focusTarget.nombre)}
+        <small>Haz clic en el punto para ver los detalles</small>
+      </span>
+    `;
+
+    const overlay = new Overlay({
+      element,
+      position: center,
+      positioning: "center-center",
+      stopEvent: false,
+    });
+
+    map.addOverlay(overlay);
+
+    const timer = window.setTimeout(() => map.removeOverlay(overlay), 12000);
+
+    return () => {
+      window.clearTimeout(timer);
+      map.removeOverlay(overlay);
+    };
+  }, [focusTarget]);
 
   const handleBaseMapChange = (id: BaseMapId) => {
     setSatelliteFailed(false);
