@@ -30,7 +30,7 @@ function config() {
       process.env.AI_BASE_URL ??
       "https://generativelanguage.googleapis.com/v1beta/openai"
     ).replace(/\/+$/, ""),
-    model: process.env.AI_MODEL ?? "gemini-2.5-flash",
+    model: process.env.AI_MODEL ?? "gemini-3.8-flash",
     supabaseUrl: (process.env.SUPABASE_URL ?? "").replace(/\/+$/, ""),
     supabaseKey: process.env.SUPABASE_ANON_KEY ?? "",
   };
